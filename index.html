@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCO Gaming Guild</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --dark-blue: #080b14;
+            --gold: #b8860b;
+            --accent-gold: #ffd700;
+        }
+        
+        html {
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+        
+        section {
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        body {
+            background: linear-gradient(
+                135deg,
+                #000000 0%,
+                #080b14 50%,
+                #0f1629 100%
+            );
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+            color: white;
+        }
+        
+        .hero-title {
+            background: linear-gradient(to right, var(--gold), var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(184, 134, 11, 0.3);
+        }
+        
+        .card {
+            background: rgba(8, 11, 20, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(184, 134, 11, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: var(--gold);
+            box-shadow: 0 0 20px rgba(184, 134, 11, 0.2);
+        }
+        
+        .team-member {
+            transition: all 0.3s ease;
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        .team-member:hover {
+            transform: translateY(-10px);
+        }
+        
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .glow {
+            box-shadow: 0 0 20px rgba(184, 134, 11, 0.3);
+        }
+        
+        .hexagon-bg {
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill-opacity='0.03' fill='%23b8860b'/%3E%3C/svg%3E");
+        }
+        
+        .scroll-nav {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+        }
+        
+        .scroll-nav a {
+            display: block;
+            width: 10px;
+            height: 10px;
+            margin: 10px 0;
+            border-radius: 50%;
+            background-color: rgba(184, 134, 11, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .scroll-nav a:hover,
+        .scroll-nav a.active {
+            background-color: var(--gold);
+            transform: scale(1.5);
+        }
+
+        [data-animate] {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s ease;
+        }
+
+        [data-animate].in-view {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="hexagon-bg">
+    <!-- Navigation Dots -->
+    <nav class="scroll-nav hidden md:block">
+        <a href="#hero" class="active"></a>
+        <a href="#expertise"></a>
+        <a href="#team"></a>
+        <a href="#stats"></a>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero" class="relative overflow-hidden p-4">
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black opacity-20"></div>
+        <div class="relative z-10 text-center">
+            <div class="mb-8 floating">
+                <img src="/api/placeholder/200/200" alt="TCO Logo" class="mx-auto rounded-full border-4 border-gold glow">
+            </div>
+            <h1 class="text-5xl md:text-7xl font-bold mb-4 hero-title" data-animate>TCO Gaming</h1>
+            <p class="text-xl md:text-3xl max-w-2xl mx-auto text-gray-400" data-animate>
+                Pioneering the Future of Web3 Gaming
+            </p>
+        </div>
+    </section>
+
+    <!-- Expertise Section -->
+    <section id="expertise" class="relative p-4">
+        <div class="max-w-6xl mx-auto relative z-10">
+            <h2 class="text-4xl font-bold mb-12 hero-title text-center" data-animate>Our Expertise</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="card p-8 rounded-xl" data-animate>
+                    <h3 class="text-2xl font-bold mb-4 hero-title">Consulting</h3>
+                    <p class="text-gray-400">Revolutionizing Web3 gaming through strategic advisory, economy design, and game balance optimization</p>
+                </div>
+                <div class="card p-8 rounded-xl" data-animate>
+                    <h3 class="text-2xl font-bold mb-4 hero-title">Competition</h3>
+                    <p class="text-gray-400">Elite tournament participation and championship-level competitive gaming across multiple titles</p>
+                </div>
+                <div class="card p-8 rounded-xl" data-animate>
+                    <h3 class="text-2xl font-bold mb-4 hero-title">Content</h3>
+                    <p class="text-gray-400">Premium strategy guides, professional coaching, and engaging educational content creation</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Team Section -->
+    <section id="team" class="p-4">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-4xl font-bold mb-12 hero-title text-center" data-animate>Elite Team</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
+                <!-- Team members with staggered animation -->
+                <div class="team-member text-center" style="animation-delay: 0.1s">
+                    <div class="relative mb-6">
+                        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-gold opacity-20 rounded-full"></div>
+                        <img src="/api/placeholder/200/200" alt="Elahzul" class="mx-auto rounded-full border-4 border-gold glow">
+                    </div>
+                    <h3 class="text-2xl font-bold hero-title">Elahzul</h3>
+                    <p class="text-gray-400">Strategy & Economics</p>
+                    <p class="mt-2 text-sm text-gray-500">Former HGC Pro • Axie Champion</p>
+                </div>
+                <div class="team-member text-center" style="animation-delay: 0.2s">
+                    <div class="relative mb-6">
+                        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-gold opacity-20 rounded-full"></div>
+                        <img src="/api/placeholder/200/200" alt="Cilium" class="mx-auto rounded-full border-4 border-gold glow">
+                    </div>
+                    <h3 class="text-2xl font-bold hero-title">Cilium</h3>
+                    <p class="text-gray-400">Community & Content</p>
+                    <p class="mt-2 text-sm text-gray-500">FNATIC Alumni • Na`Vi Veteran</p>
+                </div>
+                <div class="team-member text-center" style="animation-delay: 0.3s">
+                    <div class="relative mb-6">
+                        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-gold opacity-20 rounded-full"></div>
+                        <img src="/api/placeholder/200/200" alt="Lynx" class="mx-auto rounded-full border-4 border-gold glow">
+                    </div>
+                    <h3 class="text-2xl font-bold hero-title">Lynx</h3>
+                    <p class="text-gray-400">Competitive Gaming</p>
+                    <p class="mt-2 text-sm text-gray-500">Pro LoL Player • Speedrunner</p>
+                </div>
+                <div class="team-member text-center" style="animation-delay: 0.4s">
+                    <div class="relative mb-6">
+                        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-gold opacity-20 rounded-full"></div>
+                        <img src="/api/placeholder/200/200" alt="ADRD" class="mx-auto rounded-full border-4 border-gold glow">
+                    </div>
+                    <h3 class="text-2xl font-bold hero-title">ADRD</h3>
+                    <p class="text-gray-400">Technical Strategy</p>
+                    <p class="mt-2 text-sm text-gray-500">Strategic Innovator</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section id="stats" class="p-4">
+        <div class="max-w-6xl mx-auto">
+            <div class="grid md:grid-cols-3 gap-8 text-center">
+                <div class="card p-8 rounded-xl" data-animate>
+                    <h4 class="text-4xl font-bold hero-title mb-2">50+</h4>
+                    <p class="text-gray-400">Tournament Victories</p>
+                </div>
+                <div class="card p-8 rounded-xl" data-animate>
+                    <h4 class="text-4xl font-bold hero-title mb-2">10+</h4>
+                    <p class="text-gray-400">Years Experience</p>
+                </div>
+                <div class="card p-8 rounded-xl" data-animate>
+                    <h4 class="text-4xl font-bold hero-title mb-2">20+</h4>
+                    <p class="text-gray-400">Games Mastered</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Handle scroll snap navigation
+        document.querySelectorAll('.scroll-nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = document.querySelector(e.target.getAttribute('href'));
+                target.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        // Update active nav dot
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.scroll-nav a');
+
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.5
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // Update nav dots
+                    navLinks.forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href').slice(1) === entry.target.id) {
+                            link.classList.add('active');
+                        }
+                    });
+
+                    // Animate elements in view
+                    entry.target.querySelectorAll('[data-animate]').forEach(el => {
+                        el.classList.add('in-view');
+                    });
+                }
+            });
+        }, observerOptions);
+
+        sections.forEach(section => observer.observe(section));
+    </script>
+</body>
+</html>
