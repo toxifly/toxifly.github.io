@@ -100,14 +100,26 @@
             background-color: #222;
             display: flex;
             flex-direction: column;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.3s, box-shadow 0.3s;
             position: relative;
             cursor: pointer;
+            transform-origin: center bottom;
         }
         
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+        
+        .card.played {
+            animation: card-played 1s forwards;
+        }
+        
+        @keyframes card-played {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            50% { transform: translateY(-100px) scale(1.2) rotate(5deg); opacity: 0.8; }
+            100% { transform: translateY(200px) scale(0.5) rotate(20deg); opacity: 0; }
         }
         
         .card.attack {
@@ -246,23 +258,29 @@
             position: absolute;
             color: #ff5555;
             font-weight: bold;
-            animation: float-up 1s forwards;
+            font-size: 24px;
+            text-shadow: 2px 2px 0 #000;
+            animation: float-up 1.5s forwards;
+            z-index: 100;
         }
         
         .heal-text {
             position: absolute;
             color: #55ff55;
             font-weight: bold;
-            animation: float-up 1s forwards;
+            font-size: 24px;
+            text-shadow: 2px 2px 0 #000;
+            animation: float-up 1.5s forwards;
+            z-index: 100;
         }
         
         @keyframes float-up {
             0% {
-                transform: translateY(0);
+                transform: translateY(0) scale(1);
                 opacity: 1;
             }
             100% {
-                transform: translateY(-30px);
+                transform: translateY(-50px) scale(1.2);
                 opacity: 0;
             }
         }
@@ -1149,22 +1167,73 @@
                 
                 // Play effect
                 this.log(`${source.name} plays ${cardTemplate.name}.`, source === this.player ? 'player' : 'enemy');
-                cardTemplate.effect(this, source, target);
                 
-                this.updateUI();
-                
-                // Add a visual effect for the player
+                // Add a visual effect for the card being played
                 if (source === this.player) {
-                    // Animate card being played
+                    // Find the card element and animate it
                     const cardElements = document.querySelectorAll('.card');
                     cardElements.forEach(card => {
                         if (card.dataset.cardId === cardId) {
-                            card.classList.add('flash');
+                            card.classList.add('played');
+                            
+                            // Create floating card name
+                            const cardNameElem = document.createElement('div');
+                            cardNameElem.textContent = cardTemplate.name;
+                            cardNameElem.style.position = 'absolute';
+                            cardNameElem.style.top = '40%';
+                            cardNameElem.style.left = '50%';
+                            cardNameElem.style.transform = 'translate(-50%, -50%)';
+                            cardNameElem.style.fontSize = '24px';
+                            cardNameElem.style.fontWeight = 'bold';
+                            cardNameElem.style.color = this.getCardTypeColor(cardTemplate.type);
+                            cardNameElem.style.textShadow = '2px 2px 0 #000';
+                            cardNameElem.style.zIndex = '1000';
+                            cardNameElem.style.animation = 'float-up 1.5s forwards';
+                            document.body.appendChild(cardNameElem);
+                            
+                            setTimeout(() => {
+                                cardNameElem.remove();
+                            }, 1500);
+                            
                             setTimeout(() => {
                                 card.remove();
-                            }, 300);
+                            }, 900);
                         }
                     });
+                } else if (source === this.enemy) {
+                    // Create floating card for enemy
+                    const cardNameElem = document.createElement('div');
+                    cardNameElem.textContent = cardTemplate.name;
+                    cardNameElem.style.position = 'absolute';
+                    cardNameElem.style.top = '30%';
+                    cardNameElem.style.left = '50%';
+                    cardNameElem.style.transform = 'translate(-50%, -50%)';
+                    cardNameElem.style.fontSize = '24px';
+                    cardNameElem.style.fontWeight = 'bold';
+                    cardNameElem.style.color = this.getCardTypeColor(cardTemplate.type);
+                    cardNameElem.style.textShadow = '2px 2px 0 #000';
+                    cardNameElem.style.zIndex = '1000';
+                    cardNameElem.style.animation = 'float-up 1.5s forwards';
+                    document.body.appendChild(cardNameElem);
+                    
+                    setTimeout(() => {
+                        cardNameElem.remove();
+                    }, 1500);
+                }
+                
+                // Wait a moment before applying the effect to let animation play
+                setTimeout(() => {
+                    cardTemplate.effect(this, source, target);
+                    this.updateUI();
+                }, 300);
+            }
+            
+            getCardTypeColor(type) {
+                switch (type) {
+                    case CARD_TYPES.ATTACK: return '#ff5555';
+                    case CARD_TYPES.DEFENSE: return '#5555ff';
+                    case CARD_TYPES.SKILL: return '#55ff55';
+                    default: return '#ffffff';
                 }
             }
             
@@ -1236,9 +1305,23 @@
                         damageText.style.top = `${Math.random() * 50 + 100}px`;
                         document.body.appendChild(damageText);
                         
+                        // Add hit effect
+                        const hitEffect = document.createElement('div');
+                        hitEffect.style.position = 'absolute';
+                        hitEffect.style.left = `${Math.random() * 200 + 300}px`;
+                        hitEffect.style.top = `${Math.random() * 50 + 100}px`;
+                        hitEffect.style.width = '50px';
+                        hitEffect.style.height = '50px';
+                        hitEffect.style.backgroundColor = '#ff5555';
+                        hitEffect.style.borderRadius = '50%';
+                        hitEffect.style.opacity = '0.7';
+                        hitEffect.style.animation = 'hit-effect 0.5s forwards';
+                        document.body.appendChild(hitEffect);
+                        
                         setTimeout(() => {
                             damageText.remove();
-                        }, 1000);
+                            hitEffect.remove();
+                        }, 1500);
                     } else {
                         this.elements.player.classList.add('shake');
                         setTimeout(() => {
@@ -1253,9 +1336,23 @@
                         damageText.style.top = `${Math.random() * 50 + 250}px`;
                         document.body.appendChild(damageText);
                         
+                        // Add hit effect
+                        const hitEffect = document.createElement('div');
+                        hitEffect.style.position = 'absolute';
+                        hitEffect.style.left = `${Math.random() * 200 + 300}px`;
+                        hitEffect.style.top = `${Math.random() * 50 + 250}px`;
+                        hitEffect.style.width = '50px';
+                        hitEffect.style.height = '50px';
+                        hitEffect.style.backgroundColor = '#ff5555';
+                        hitEffect.style.borderRadius = '50%';
+                        hitEffect.style.opacity = '0.7';
+                        hitEffect.style.animation = 'hit-effect 0.5s forwards';
+                        document.body.appendChild(hitEffect);
+                        
                         setTimeout(() => {
                             damageText.remove();
-                        }, 1000);
+                            hitEffect.remove();
+                        }, 1500);
                     }
                 }
                 
@@ -1360,20 +1457,24 @@
                 this.currentFloor++;
                 this.updateFloorInfo();
                 this.generateEnemy();
+                
+                // Heal player fully between floors
+                this.player.hp = this.player.maxHp;
+                this.log(`You rest between floors and recover to full health.`, 'reward');
+                
                 this.updateStats();
                 
-                // Heal player slightly between floors
-                const healAmount = Math.floor(this.player.maxHp * 0.1);
-                this.player.hp = Math.min(this.player.hp + healAmount, this.player.maxHp);
-                this.log(`You rest between floors and recover ${healAmount} HP.`, 'system');
-                
-                this.elements.startBattleBtn.disabled = false;
+                this.elements.startBattleBtn.disabled = true;
                 this.elements.nextFloorBtn.disabled = true;
                 
                 // Win condition
                 if (this.currentFloor > 10) {
                     this.gameOver(true);
+                    return;
                 }
+                
+                // Automatically start battle after a short delay
+                setTimeout(() => this.startBattle(), 1000);
             }
             
             gameOver(victory) {
