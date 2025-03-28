@@ -125,7 +125,7 @@ h2 {
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 8px;
+    padding: 8px 0;
     box-sizing: border-box;
     color: white;
     text-shadow: 1px 1px 2px black;
@@ -184,19 +184,16 @@ h2 {
     text-align: center;
     font-size: 1.1em;
     margin-bottom: 5px;
+    padding: 0 40px 0 8px;
 }
 
 .card-description {
     margin-top: auto;
-    margin-bottom: 0;
-    font-size: 0.9em;
     text-align: center;
-    line-height: 1.2;
-    padding: 5px;
+    font-size: 0.8em;
+    padding: 5px 8px;
     background: rgba(0,0,0,0.4);
     border-radius: 4px;
-    overflow: hidden;
-    max-height: 50%;
 }
 
 .card-type {
@@ -451,6 +448,7 @@ button:disabled {
 /* Ensure preview content (name, desc) scales down */
 .next-card-preview-style .card-name {
     font-size: 0.8em;
+    padding: 0 25px 0 5px;
 }
 .next-card-preview-style .card-cost {
     width: 18px;
@@ -460,8 +458,8 @@ button:disabled {
     right: 4px;
 }
 .next-card-preview-style .card-description {
-    font-size: 0.7em;
-    padding: 3px;
+    font-size: 0.65em;
+    padding: 3px 5px;
     max-height: 40%; /* Adjust as needed */
 }
 
