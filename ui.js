@@ -9,7 +9,6 @@ export const elements = {
     playerEnergy: document.getElementById('player-energy'),
     playerMaxEnergy: document.getElementById('player-max-energy'),
     playerMomentum: document.getElementById('player-momentum'),
-    playerMaxMomentum: document.getElementById('player-max-momentum'),
     playerHand: document.getElementById('player-hand'),
     player: document.getElementById('player'),
     nextCardPreview: document.getElementById('next-card-preview'),
@@ -17,6 +16,8 @@ export const elements = {
     enemyName: document.getElementById('enemy-name'),
     enemyHp: document.getElementById('enemy-hp'),
     enemyEnergy: document.getElementById('enemy-energy'),
+    enemyBlock: document.getElementById('enemy-block'),
+    enemyMomentum: document.getElementById('enemy-momentum'),
     enemyContainer: document.getElementById('enemy'),
 
     logContainer: document.getElementById('log-container'),
@@ -132,6 +133,7 @@ export function updatePlayerHandUI(hand) {
  */
 export function updateStatsUI(player, enemy = null) {
     console.log('[UI] Updating stats UI...');
+    const defaultMaxMomentum = MAX_MOMENTUM || 10; // Use constant or default
 
     // Update Player Stats
     if (player && elements.playerHp) { // Check if player and elements exist
@@ -140,9 +142,9 @@ export function updateStatsUI(player, enemy = null) {
         elements.playerHp.textContent = `${player.hp ?? '--'}/${player.maxHp ?? '--'}`;
         elements.playerBlock.textContent = player.block ?? 0;
         elements.playerEnergy.textContent = `${player.energy ?? '-'}/${player.maxEnergy ?? '-'}`;
-        elements.playerMomentum.textContent = player.momentum ?? 0;
-        elements.playerMaxMomentum.textContent = player.maxMomentum ?? 10; // Default if missing
-        console.log(`[UI] Player stats updated: HP=${elements.playerHp.textContent}, Block=${elements.playerBlock.textContent}, Energy=${elements.playerEnergy.textContent}, Momentum=${elements.playerMomentum.textContent}/${elements.playerMaxMomentum.textContent}`);
+        // Update player momentum display format
+        elements.playerMomentum.textContent = `${player.momentum ?? 0}/${player.maxMomentum ?? defaultMaxMomentum}`;
+        console.log(`[UI] Player stats updated: HP=${elements.playerHp.textContent}, Block=${elements.playerBlock.textContent}, Energy=${elements.playerEnergy.textContent}, Momentum=${elements.playerMomentum.textContent}`);
     } else {
         console.warn('[UI] updateStatsUI called without player object or player elements not found.');
         // Optionally clear or set default values if player is null
@@ -151,8 +153,8 @@ export function updateStatsUI(player, enemy = null) {
             elements.playerHp.textContent = '--/--';
             elements.playerBlock.textContent = '0';
             elements.playerEnergy.textContent = '-/-';
-            elements.playerMomentum.textContent = '0';
-            elements.playerMaxMomentum.textContent = '10';
+            // Update player momentum display format for default
+            elements.playerMomentum.textContent = `0/${defaultMaxMomentum}`;
         }
     }
 
@@ -161,9 +163,10 @@ export function updateStatsUI(player, enemy = null) {
         elements.enemyName.textContent = enemy.name || 'Enemy';
         elements.enemyHp.textContent = `${enemy.hp ?? '--'}/${enemy.maxHp ?? '--'}`;
         elements.enemyEnergy.textContent = `${enemy.energy ?? '-'}/${enemy.maxEnergy ?? '-'}`;
-        // Update enemy block if you have an element for it
-        // elements.enemyBlock.textContent = enemy.block ?? 0;
-        console.log(`[UI] Enemy stats updated: HP=${elements.enemyHp.textContent}, Energy=${elements.enemyEnergy.textContent}`);
+        // Update enemy block and momentum using new elements
+        elements.enemyBlock.textContent = enemy.block ?? 0;
+        elements.enemyMomentum.textContent = `${enemy.momentum ?? 0}/${enemy.maxMomentum ?? defaultMaxMomentum}`;
+        console.log(`[UI] Enemy stats updated: HP=${elements.enemyHp.textContent}, Energy=${elements.enemyEnergy.textContent}, Block=${elements.enemyBlock.textContent}, Momentum=${elements.enemyMomentum.textContent}`);
 
         // Update enemy background image if applicable
         const enemyElement = document.getElementById('enemy');
@@ -180,8 +183,9 @@ export function updateStatsUI(player, enemy = null) {
             elements.enemyName.textContent = 'Enemy';
             elements.enemyHp.textContent = '--/--';
             elements.enemyEnergy.textContent = '-/-';
-            // Clear enemy block if applicable
-            // elements.enemyBlock.textContent = '0';
+            // Clear enemy block and momentum if applicable
+            elements.enemyBlock.textContent = '0';
+            elements.enemyMomentum.textContent = `0/${defaultMaxMomentum}`;
         }
         const enemyElement = document.getElementById('enemy');
         if (enemyElement) {
@@ -426,8 +430,8 @@ export function updateDeckViewUI(player) {
             <div class="stat-value">${player.strength ?? 0}</div>
         </div>
          <div class="player-stat">
-            <div>Max Momentum</div>
-            <div class="stat-value">${player.maxMomentum ?? 10}</div>
+            <div>Momentum</div>
+            <div class="stat-value">${player.momentum ?? 0}/10</div>
         </div>
         <!-- Add Block if needed in deck view -->
         <!-- <div>Block: <span id="player-block">${player.block ?? 0}</span></div> -->
