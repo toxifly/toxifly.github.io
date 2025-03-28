@@ -262,10 +262,10 @@ The main class orchestrating the game.
     *   **Side Effects:** Modifies player/enemy state (energy, **momentum**, hand, discard pile, HP, block), calls card effects, updates UI, animates card play, logs actions, potentially calls `UI.showMomentumBurstEffect` and `endPlayerTurn` early, schedules itself recursively or calls `endPlayerTurn`.
 
 7.  **`endPlayerTurn()`**
-    *   **Purpose:** Concludes the player's turn. Discards the player's hand and schedules the enemy's turn.
+    *   **Purpose:** Concludes the player's turn. **Previously discarded the player's hand, but now retains cards in hand.** Schedules the enemy's turn.
     *   **Input:** None.
     *   **Output:** None.
-    *   **Side Effects:** Moves cards from player's hand to discard pile, updates UI, logs turn end, schedules `startEnemyTurn`.
+    *   **Side Effects:** Updates UI, logs turn end, schedules `startEnemyTurn`. **Does NOT modify player's hand anymore.**
 
 8.  **`startEnemyTurn()`**
     *   **Purpose:** Begins the enemy's turn. Resets enemy block and energy, handles start-of-turn effects, draws cards (internally, no UI), updates stats, and schedules the enemy's action.
@@ -279,19 +279,13 @@ The main class orchestrating the game.
     *   **Output:** (Promise) Resolves when the action (playing a card or deciding to end turn) is complete.
     *   **Side Effects:** Modifies enemy state (energy, hand, discard pile), calls card effects, updates UI, animates card play (name only), logs actions, schedules itself recursively or calls `endEnemyTurn`.
 
-10. **`endEnemyTurn()`**
-    *   **Purpose:** Concludes the enemy's turn. Discards the enemy's hand (internally) and schedules the player's next turn.
-    *   **Input:** None.
-    *   **Output:** None.
-    *   **Side Effects:** Moves cards from enemy's hand to discard pile, updates UI stats, logs turn end, schedules `startPlayerTurn`.
-
-11. **`drawCard()`**
-    *   **Purpose:** Draws a single card for the player from their draw pile into their hand. Handles reshuffling the discard pile if the draw pile is empty and respects the maximum hand size limit (burning cards if full).
+10. **`drawCard()`**
+    *   **Purpose:** Draws a single card for the player from their draw pile into their hand. Handles reshuffling the discard pile if the draw pile is empty. **Respects the maximum hand size limit, burning the drawn card (moving it directly to discard) if the hand is already full.**
     *   **Input:** None.
     *   **Output:** None.
     *   **Side Effects:** Modifies player state (hand, draw pile, discard pile). Logs reshuffling and card burning.
 
-12. **`dealDamage(source, target, amount, ignoreBlock = false)`**
+11. **`dealDamage(source, target, amount, ignoreBlock = false)`**
     *   **Purpose:** Calculates and applies damage from a source entity to a target entity. Considers strength, vulnerability, and block (unless ignored). Triggers visual effects and checks for lethal damage.
     *   **Input:**
         *   `source` (Object) - The entity dealing damage.
@@ -301,67 +295,67 @@ The main class orchestrating the game.
     *   **Output:** (Boolean) - `true` if the target was defeated, `false` otherwise.
     *   **Side Effects:** Modifies target's `hp` and `block`, updates UI stats, shows damage effect, logs damage dealt/blocked, calls `enemyDefeated` or `gameOver` if lethal.
 
-13. **`enemyDefeated()`**
+12. **`enemyDefeated()`**
     *   **Purpose:** Handles the logic when an enemy is defeated. Ends the battle state, logs the victory message, checks for game win condition (max floor reached), or shows the reward screen and enables progression.
     *   **Input:** None.
     *   **Output:** None.
     *   **Side Effects:** Sets `inBattle` to `false`, updates UI (stats, enables buttons), logs defeat, calls `gameOver` or `showReward`.
 
-14. **`showReward()`**
+13. **`showReward()`**
     *   **Purpose:** Generates card reward options based on rarity and floor number, then displays the reward UI.
     *   **Input:** None.
     *   **Output:** None.
     *   **Side Effects:** Calls `UI.showRewardUI` with generated card IDs and the `handleRewardChoice` callback. Logs reward generation steps.
 
-15. **`handleRewardChoice(chosenCardIds)`**
+14. **`handleRewardChoice(chosenCardIds)`**
     *   **Purpose:** Callback function executed after the player finalizes their reward selection via the UI. Adds the chosen cards (if any) to the player's deck. Automatically proceeds to the next floor.
     *   **Input:** `chosenCardIds` (Array) - An array containing the IDs of the chosen cards (empty if skipped).
     *   **Output:** None.
     *   **Side Effects:** Modifies `player.deck` if cards were chosen, logs the choices, calls `nextFloor()`.
 
-16. **`nextFloor()`**
+15. **`nextFloor()`**
     *   **Purpose:** Advances the game to the next floor. Called automatically after reward selection/skip. Disables the 'Next Floor' button, increments floor count, heals the player slightly, generates a new enemy, updates UI, and enables the battle start button.
     *   **Input:** None.
     *   **Output:** None.
     *   **Side Effects:** Disables `elements.nextFloorBtn`, increments `currentFloor`, modifies `player.hp`, calls `generateEnemy`, updates UI (floor info, stats, buttons), shows heal effect, logs floor progression.
 
-17. **`gameOver(victory)`**
+16. **`gameOver(victory)`**
     *   **Purpose:** Ends the current game session, displaying either a victory or defeat message on the game over screen. Disables game interaction buttons.
     *   **Input:** `victory` (Boolean) - `true` if the player won, `false` otherwise.
     *   **Output:** None.
     *   **Side Effects:** Sets `inBattle` to `false`, calls `UI.showGameOverUI`, logs game over message, disables UI buttons.
 
-18. **`restart()`**
+17. **`restart()`**
     *   **Purpose:** Resets the game to the initial state by calling `setUpNewGame`.
     *   **Input:** None.
     *   **Output:** None.
     *   **Side Effects:** Calls `setUpNewGame`. Logs restart.
 
-19. **`viewDeck()`**
+18. **`viewDeck()`**
     *   **Purpose:** Displays the deck view/builder screen.
     *   **Input:** None.
     *   **Output:** None.
     *   **Side Effects:** Calls `UI.showDeckUI`. Logs action.
 
-20. **`hideViewDeck()`**
+19. **`hideViewDeck()`**
     *   **Purpose:** Hides the deck view/builder screen.
     *   **Input:** None.
     *   **Output:** None.
     *   **Side Effects:** Calls `UI.hideDeckUI`. Logs action.
 
-21. **`updateUI()`**
+20. **`updateUI()`**
     *   **Purpose:** Convenience method to update both the stats display and the player's hand display in the UI.
     *   **Input:** None.
     *   **Output:** None.
     *   **Side Effects:** Calls `updateStats` and `UI.updatePlayerHandUI`.
 
-22. **`updateStats()`**
+21. **`updateStats()`**
     *   **Purpose:** Updates the player and enemy stat displays (HP, Energy, Block, **Momentum**, etc.) in the UI.
     *   **Input:** None.
     *   **Output:** None.
     *   **Side Effects:** Calls `UI.updateStatsUI`.
 
-23. **`log(message, type = 'system')`**
+22. **`log(message, type = 'system')`**
     *   **Purpose:** Adds a message to the in-game log display area using the UI module.
     *   **Input:**
         *   `message` (String) - The text to log.
@@ -369,7 +363,7 @@ The main class orchestrating the game.
     *   **Output:** None.
     *   **Side Effects:** Calls `UI.logMessage`.
 
-24. **`generateRewards()`**
+23. **`generateRewards()`**
     *   **Purpose:** Generates reward options after a battle is won. Selects `NUM_REWARD_CHOICES` unique, non-starter cards and displays them using `UI.showRewardUI`, allowing `NUM_REWARD_PICKS`.
     *   **Input:** None.
     *   **Output:** None.

@@ -151,7 +151,7 @@ class CardBattler {
         this.startPlayerTurn();
     }
 
-    startPlayerTurn() {
+    async startPlayerTurn() {
         console.log('[Game] Checking battle state before starting player turn...');
         if (!this.inBattle) {
             console.warn('[Game] startPlayerTurn called but not in battle. Aborting.');
@@ -193,17 +193,31 @@ class CardBattler {
              }
         }
 
-        console.log(`[Game] Player drawing ${BASE_DRAW} card(s).`);
-        for (let i = 0; i < BASE_DRAW; i++) {
-            this.drawCard();
+        // Draw cards up to hand size limit
+        const cardsToDraw = PLAYER_MAX_HAND_SIZE - this.player.hand.length;
+        console.log(`[Game] Player turn start. Hand size: ${this.player.hand.length}, Max size: ${PLAYER_MAX_HAND_SIZE}. Attempting to draw ${cardsToDraw > 0 ? cardsToDraw : 0} cards.`);
+        if (cardsToDraw > 0) {
+            this.log(`${this.player.name} draws ${cardsToDraw} card${cardsToDraw > 1 ? 's' : ''}.`, 'player');
+            for (let i = 0; i < cardsToDraw; i++) {
+                // Check hand size again inside loop in case drawCard shuffles and fails? No, drawCard handles burn.
+                if (this.player.hand.length < PLAYER_MAX_HAND_SIZE) { // Double check just in case
+                    this.drawCard(); // Handles reshuffle and burning if hand becomes full unexpectedly
+                } else {
+                    console.warn(`[Game] Skipped drawing card ${i+1}/${cardsToDraw} as hand reached max size unexpectedly.`);
+                    break; // Stop drawing if hand is full
+                }
+            }
+        } else {
+             this.log(`${this.player.name}'s hand is full.`, 'player');
         }
-        console.log(`[Game] Player finished drawing. Hand size: ${this.player.hand.length}`);
 
-        this.updateUI();
-        console.log('[Game] UI updated after drawing card(s).');
+        // Update UI after drawing
+        updatePlayerHandUI(this.player.hand, this);
+        this.updateNextCardPreview(); // Update after drawing
 
-        console.log('[Game] Scheduling automated player turn action...');
-        setTimeout(() => this.playPlayerTurn(), DELAY_TURN_START);
+        // Schedule the first player action
+        await delay(DELAY_PRE_ACTION); // Short delay before player AI acts
+        this.playPlayerTurn();
     }
 
     async playPlayerTurn() {
@@ -304,20 +318,17 @@ class CardBattler {
         }
     }
 
-    endPlayerTurn() {
-        console.log('[Game] Ending player turn...');
-        this.log(`${this.player.name} ends their turn.`, 'player');
+    async endPlayerTurn() {
+        console.log('[Game] Ending player turn.');
+        this.log(`${this.player.name} ends their turn.`, 'system');
+        await delay(DELAY_TURN_END);
 
-        console.log(`[Game] Discarding player hand. Hand size: ${this.player.hand.length}`);
-        this.player.discardPile.push(...this.player.hand);
-        this.player.hand = [];
-        console.log(`[Game] Player hand discarded. Discard size: ${this.player.discardPile.length}`);
+        // Update UI to reflect empty hand (or potentially retained cards if logic changes)
+        updatePlayerHandUI(this.player.hand, this);
+        this.updateNextCardPreview(); // Update preview after potential discards (or lack thereof)
 
-        this.updateUI();
-        console.log('[Game] UI updated after discarding hand.');
-
-        console.log('[Game] Scheduling enemy turn start...');
-        setTimeout(() => this.startEnemyTurn(), DELAY_TURN_END);
+        // Start enemy turn
+        this.startEnemyTurn();
     }
 
     startEnemyTurn() {
@@ -475,10 +486,32 @@ class CardBattler {
     }
 
     drawCard() {
+        console.log(`[Game] Attempting to draw card. Hand: ${this.player.hand.length}/${PLAYER_MAX_HAND_SIZE}`);
         if (this.player.hand.length >= PLAYER_MAX_HAND_SIZE) {
-            console.log(`[Game] Player hand already full (${this.player.hand.length}/${PLAYER_MAX_HAND_SIZE}). Not drawing.`);
-            this.updateNextCardPreview();
-            return;
+            console.log(`[Game] Player hand is full (${this.player.hand.length}). Burning next card.`);
+            // Burn card: Draw from pile and immediately discard
+            if (this.player.drawPile.length === 0) {
+                if (this.player.discardPile.length === 0) {
+                    console.log(`[Game] No cards left in draw or discard to burn.`);
+                     this.log(`${this.player.name} has no cards left to draw or burn.`, 'player');
+                     this.updateNextCardPreview(); // Ensure preview is updated
+                    return; // Nothing to draw or burn
+                }
+                // Reshuffle if draw pile is empty
+                console.log(`[Game] Player draw pile empty for burning. Shuffling discard pile (${this.player.discardPile.length} cards)...`);
+                this.player.drawPile = shuffleArray([...this.player.discardPile]);
+                this.player.discardPile = [];
+                this.log(`${this.player.name} shuffles their discard pile.`, 'player');
+                console.log(`[Game] Player discard pile shuffled into draw pile. Draw size: ${this.player.drawPile.length}`);
+            }
+            // Burn the card
+            const burnedCardId = this.player.drawPile.pop();
+            this.player.discardPile.push(burnedCardId);
+            const burnedCardTemplate = getCardTemplate(burnedCardId);
+            this.log(`${this.player.name} burns ${burnedCardTemplate?.name || 'a card'} (hand full).`, 'player-fade');
+            console.log(`[Game] Burned card: ${burnedCardId}. Discard pile size: ${this.player.discardPile.length}`);
+            this.updateNextCardPreview(); // Update after burning
+            return; // Card burned, do not add to hand
         }
 
         if (this.player.drawPile.length === 0 && this.player.discardPile.length > 0) {
