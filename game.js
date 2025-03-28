@@ -85,7 +85,8 @@ class CardBattler {
             discardPile: [],
             statusEffects: {},
             momentum: 0,
-            maxMomentum: 10,
+            maxMomentum: MAX_MOMENTUM,
+            momentumGainMultiplier: 1,
         };
         console.log('[Game] Player initialized:', JSON.parse(JSON.stringify(this.player)));
 
@@ -535,17 +536,7 @@ class CardBattler {
     }
 
     updateNextCardPreview() {
-        let nextCardId = null;
-        if (this.player.drawPile.length > 0) {
-            nextCardId = this.player.drawPile[this.player.drawPile.length - 1];
-        } else if (this.player.discardPile.length > 0) {
-             console.log('[Game] Draw pile empty, next card is uncertain (after shuffle).');
-             nextCardId = null;
-        } else {
-             console.log('[Game] No cards in draw or discard pile.');
-        }
-         console.log(`[Game] Updating next card preview. Next card ID: ${nextCardId}`);
-        updateNextCardPreviewUI(nextCardId);
+        updateNextCardPreviewUI(this.player.drawPile, this.player.berserk > 0);
     }
 
     dealDamage(source, target, amount, ignoreBlock = false) {
@@ -650,6 +641,7 @@ class CardBattler {
             elements.viewDeckBtn.disabled = false;
         }
         console.log('[Game] Enemy defeat processing complete.');
+        this.player.berserk = 0;
     }
 
     startRewardPhase() {

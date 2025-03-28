@@ -550,8 +550,7 @@ export function showMomentumBurstEffect() {
  * Updates the next card preview UI.
  * @param {string|null} nextCardId - The ID of the next card to draw, or null.
  */
-export function updateNextCardPreviewUI(nextCardId) {
-    console.log(`[UI] Updating next card preview UI. Next card ID: ${nextCardId}`);
+export function updateNextCardPreviewUI(drawPile, isBerserkActive) {
     const previewContainer = elements.nextCardPreview;
     if (!previewContainer) {
         console.warn('[UI] Next card preview element not found.');
@@ -560,32 +559,33 @@ export function updateNextCardPreviewUI(nextCardId) {
 
     previewContainer.innerHTML = ''; // Clear previous preview
 
-    if (nextCardId) {
+    if (drawPile.length > 0) {
+        const nextCardId = drawPile[drawPile.length - 1]; // Peek at the top card
+        console.log(`[UI] Updating next card preview UI. Next card ID: ${nextCardId}`);
         const cardTemplate = getCardTemplate(nextCardId);
         if (cardTemplate) {
-            const cardElement = createCardElement(cardTemplate);
-            cardElement.classList.add('next-card-preview-style'); // Add class for specific styling
-            // Maybe add text above/below it
-             const label = document.createElement('div');
-             label.textContent = 'Next Draw:';
-             label.style.textAlign = 'center';
-             label.style.marginBottom = '5px';
-             label.style.fontSize = '12px';
-             label.style.color = '#aaa';
-             previewContainer.appendChild(label);
-
-            previewContainer.appendChild(cardElement);
+            previewContainer.textContent = `Next: ${cardTemplate.name}`;
+            previewContainer.classList.remove('empty');
+            // Add logic to show/hide based on card data if needed
         } else {
-            console.error(`[UI] Card template not found for next card ID: ${nextCardId}`);
-            previewContainer.textContent = 'Next: ???'; // Placeholder for error
+            previewContainer.textContent = 'Next: ???';
+            previewContainer.classList.add('empty');
         }
     } else {
-        // Handle null case (e.g., draw pile empty, needing shuffle)
-        previewContainer.textContent = 'Next: (Shuffle)';
-        previewContainer.style.textAlign = 'center';
-        previewContainer.style.color = '#aaa';
-        previewContainer.style.fontSize = '14px';
-        previewContainer.style.paddingTop = '50px'; // Center vertically roughly
+        previewContainer.textContent = 'Next: Empty';
+        previewContainer.classList.add('empty');
     }
+
+    // Show or hide the berserk icon based on the passed status
+    if (isBerserkActive) {
+        const berserkIconElement = document.getElementById('berserk-status-icon'); // Or create dynamically
+        berserkIconElement.style.display = 'inline-block'; // Or 'block', or add a visible class
+        berserkIconElement.textContent = '🔥'; // Or use an image/icon font
+        // Add tooltip maybe: berserkIconElement.title = 'Berserk Active! +1 Energy, -2 HP next turn.';
+    } else {
+        const berserkIconElement = document.getElementById('berserk-status-icon'); // Or create dynamically
+        berserkIconElement.style.display = 'none'; // Or remove the visible class
+    }
+
     console.log('[UI] Next card preview UI update complete.');
 } 
