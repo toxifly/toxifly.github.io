@@ -88,12 +88,10 @@ h2 {
 
 .hand {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 20px;
-    justify-content: center; /* Center cards in the hand area */
-    min-height: 190px; /* Ensure space even when hand is empty */
-    min-width: 150px; /* Ensure space for one card */
+    justify-content: center; /* Center the single card within the hand area */
+    align-items: center; /* Vertically center if needed */
+    min-height: 220px; /* Increased min-height for the larger card */
+    width: 100%; /* Take full width of its container */
 }
 
 .card {
@@ -154,8 +152,8 @@ h2 {
 
 @keyframes card-played {
     0% { transform: translateY(0) scale(1); opacity: 1; }
-    50% { transform: translateY(-100px) scale(1.2) rotate(5deg); opacity: 0.8; }
-    100% { transform: translateY(200px) scale(0.5) rotate(20deg); opacity: 0; }
+    50% { transform: translateY(-120px) scale(1.1) rotate(5deg); opacity: 0.8; }
+    100% { transform: translateY(150px) scale(0.5) rotate(20deg); opacity: 0; }
 }
 
 .card.attack .card-name { color: #ffaaaa; }
@@ -428,29 +426,26 @@ button:disabled {
 
 /* Container for the next card preview */
 .next-card-container {
-    position: absolute; /* Example: Position it relative to the battle area */
-    right: 20px; /* Example: Place on the right */
-    top: 250px;  /* Example: Align vertically */
-    width: 100px; /* Smaller width for preview */
+    width: 100px; /* Keep preview smaller */
     height: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* Add border/background if desired */
-    /* border: 1px dashed #777; */
+    /* border: 1px dashed #777; */ /* Optional: for debugging layout */
     /* padding: 5px; */
 }
 
 /* Styling for the card shown in the preview */
 .next-card-preview-style {
-    width: 80px;  /* Make preview smaller than hand card */
+    width: 80px;  /* Keep preview card small */
     height: 115px;
     border-width: 2px;
-    opacity: 0.8; /* Slightly faded */
-    transform: scale(0.9); /* Slightly smaller */
-    cursor: default; /* Not interactive */
-    pointer-events: none; /* Not interactive */
-    box-shadow: none; /* No hover effects needed */
+    opacity: 0.8;
+    transform: scale(0.9);
+    cursor: default;
+    pointer-events: none;
+    box-shadow: none;
+    margin-top: 5px; /* Add some space below the "Next Draw:" label */
 }
 
 /* Ensure preview content (name, desc) scales down */
@@ -470,8 +465,15 @@ button:disabled {
     max-height: 40%; /* Adjust as needed */
 }
 
-/* Prevent hover effect on the single card in hand if using auto-play */
-.hand .card:hover {
+/* Make the card in the hand larger */
+#player-hand .card {
+    width: 150px; /* Increased width */
+    height: 210px; /* Increased height */
+    /* Keep other .card styles */
+}
+
+/* Remove hover effect for the auto-played hand card */
+#player-hand .card:hover {
     transform: none;
     box-shadow: none;
     cursor: default;
