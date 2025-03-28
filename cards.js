@@ -34,15 +34,11 @@ export const CARD_TEMPLATES = [
         name: 'Quick Slash',
         type: CARD_TYPES.ATTACK,
         cost: 1,
-        description: 'Deal 4 damage. Draw a card.',
+        description: 'Deal 4 damage.',
         rarity: 'common',
         effect: (game, source, target) => {
             console.log(`[Card:quick_slash] Executing effect. Source: ${source.name}, Target: ${target.name}`);
             game.dealDamage(source, target, 4);
-            if (source === game.player) {
-                console.log(`[Card:quick_slash] Player drawing card.`);
-                game.drawCard();
-            }
         }
     },
     {
@@ -136,7 +132,7 @@ export const CARD_TEMPLATES = [
         name: 'Shrug It Off',
         type: CARD_TYPES.DEFENSE,
         cost: 1,
-        description: 'Gain 8 block. Draw a card.',
+        description: 'Gain 8 block.',
         rarity: 'uncommon',
         effect: (game, source) => {
             console.log(`[Card:shrug_it_off] Executing effect. Source: ${source.name}`);
@@ -144,10 +140,6 @@ export const CARD_TEMPLATES = [
             source.block += 8;
             console.log(`[Card:shrug_it_off] Source block changed: ${blockBefore} -> ${source.block}`);
             game.log(`${source.name} gained 8 block.`, source === game.player ? 'player' : 'enemy');
-            if (source === game.player) {
-                console.log(`[Card:shrug_it_off] Player drawing card.`);
-                game.drawCard();
-            }
         }
     },
     {
@@ -203,7 +195,7 @@ export const CARD_TEMPLATES = [
         name: 'Offering',
         type: CARD_TYPES.SKILL,
         cost: 0,
-        description: 'Lose 6 HP. Gain 2 energy and draw 3 cards.',
+        description: 'Lose 6 HP. Gain 2 energy.',
         rarity: 'rare',
         effect: (game, source) => {
             console.log(`[Card:offering] Executing effect. Source: ${source.name}`);
@@ -215,13 +207,6 @@ export const CARD_TEMPLATES = [
             game.log(`${source.name} gained 2 energy.`, source === game.player ? 'player' : 'enemy');
             console.log(`[Card:offering] Source HP: ${hpBefore} -> ${source.hp}, Energy: ${energyBefore} -> ${source.energy}`);
             game.updateStats(); // Use UI.updateStats in game.js
-
-            if (source === game.player) {
-                console.log(`[Card:offering] Player drawing 3 cards.`);
-                for (let i = 0; i < 3; i++) {
-                    game.drawCard();
-                }
-            }
 
             if (source.hp <= 0) {
                 console.warn(`[Card:offering] Source ${source.name} HP dropped to ${source.hp} or below.`);
