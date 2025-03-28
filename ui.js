@@ -551,22 +551,33 @@ export function showMomentumBurstEffect() {
  * @param {string|null} nextCardId - The ID of the next card to draw, or null.
  */
 export function updateNextCardPreviewUI(drawPile, isBerserkActive) {
-    const previewContainer = elements.nextCardPreview;
-    if (!previewContainer) {
-        console.warn('[UI] Next card preview element not found.');
-        return;
-    }
-
-    previewContainer.innerHTML = ''; // Clear previous preview
-
+    const previewContainer = document.getElementById('next-card-preview');
+    previewContainer.innerHTML = ''; // Clear any existing content
+    
     if (drawPile.length > 0) {
         const nextCardId = drawPile[drawPile.length - 1]; // Peek at the top card
         console.log(`[UI] Updating next card preview UI. Next card ID: ${nextCardId}`);
         const cardTemplate = getCardTemplate(nextCardId);
+        
         if (cardTemplate) {
-            previewContainer.textContent = `Next: ${cardTemplate.name}`;
+            // Create label
+            const labelElement = document.createElement('div');
+            labelElement.textContent = 'Next Draw:';
+            labelElement.className = 'next-card-label';
+            previewContainer.appendChild(labelElement);
+            
+            // Create card element using the existing createCardElement function
+            const cardElement = createCardElement(cardTemplate);
+            
+            // Apply preview-specific styling classes
+            cardElement.classList.add('next-card-preview-style');
+            
+            // Make sure the card isn't interactive
+            cardElement.style.cursor = 'default';
+            cardElement.style.pointerEvents = 'none';
+            
+            previewContainer.appendChild(cardElement);
             previewContainer.classList.remove('empty');
-            // Add logic to show/hide based on card data if needed
         } else {
             previewContainer.textContent = 'Next: ???';
             previewContainer.classList.add('empty');
