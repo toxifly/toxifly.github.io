@@ -85,6 +85,7 @@ class CardBattler {
             discardPile: [],
             statusEffects: {},
             momentum: 0,
+            maxMomentum: 10,
         };
         console.log('[Game] Player initialized:', JSON.parse(JSON.stringify(this.player)));
 
@@ -740,9 +741,12 @@ class CardBattler {
     }
 
     updateStats() {
-        console.log('[Game] Updating Stats UI...');
-        updateStatsUI(this.player, this.inBattle ? this.enemy : null);
-        console.log('[Game] updateStatsUI called.');
+        console.log('[Game] Updating stats via Game.updateStats()...');
+        if (this.player) {
+            updateStatsUI(this.player, this.enemy);
+        } else {
+            console.warn('[Game] Attempted to update stats, but player object is missing.');
+        }
     }
 
     log(message, type = 'system') {

@@ -126,63 +126,70 @@ export function updatePlayerHandUI(hand) {
 }
 
 /**
- * Updates the stats display for both player and enemy.
+ * Updates the stats display for player and enemy.
  * @param {object} player - The player object.
- * @param {object} [enemy=null] - The enemy object (optional).
+ * @param {object|null} enemy - The enemy object, or null if no enemy.
  */
 export function updateStatsUI(player, enemy = null) {
-    // console.debug('[UI] Updating stats UI...', { player, enemy });
+    console.log('[UI] Updating stats UI...');
 
-    // Player Stats Update (simplified, assuming it exists and is correct)
-    // ... existing player stat updates ...
-    if (elements.playerMomentum) elements.playerMomentum.textContent = player.momentum ?? 0;
-    if (elements.playerMaxMomentum) elements.playerMaxMomentum.textContent = MAX_MOMENTUM;
-
-    // Enemy Stats Update
-    if (elements.enemyContainer) { // Check if the container exists
-        if (enemy) {
-            // console.debug('[UI] Updating enemy stats display.');
-            const enemyHpText = `${enemy.hp}/${enemy.maxHp}`;
-            const enemyEnergyText = `${enemy.energy}/${enemy.maxEnergy}`;
-
-            if (elements.enemyHp) elements.enemyHp.textContent = enemyHpText;
-            if (elements.enemyEnergy) elements.enemyEnergy.textContent = enemyEnergyText;
-            if (elements.enemyName) elements.enemyName.textContent = enemy.name;
-
-            // Update enemy background image
-            const specificImageUrl = `images/enemies/${enemy.id}.png`;
-            const fallbackImageUrl = 'images/enemies/placeholder.png';
-
-            // Check if specific image exists, then apply; otherwise use fallback
-            const img = new Image();
-            img.onload = () => {
-                // Image exists, apply it
-                console.debug(`[UI] Applying enemy background: ${specificImageUrl}`);
-                elements.enemyContainer.style.backgroundImage = `url('${specificImageUrl}')`;
-            };
-            img.onerror = () => {
-                // Image doesn't exist or failed to load, use fallback
-                console.warn(`[UI] Failed to load image: ${specificImageUrl}. Using fallback: ${fallbackImageUrl}`);
-                elements.enemyContainer.style.backgroundImage = `url('${fallbackImageUrl}')`;
-            };
-            img.src = specificImageUrl; // Start loading the image to trigger onload or onerror
-
-        } else {
-            // console.debug('[UI] No enemy provided, clearing enemy stats display.');
-            // Safely clear enemy stats
-            if(elements.enemyName) elements.enemyName.textContent = '???';
-            if(elements.enemyHp) elements.enemyHp.textContent = '-/-';
-            if(elements.enemyEnergy) elements.enemyEnergy.textContent = '-/-';
-
-            // Reset background to placeholder or none when no enemy
-            const fallbackImageUrl = 'images/enemies/placeholder.png';
-            console.debug('[UI] No enemy, resetting background to placeholder.');
-            elements.enemyContainer.style.backgroundImage = `url('${fallbackImageUrl}')`; // Or 'none' if preferred
-        }
+    // Update Player Stats
+    if (player && elements.playerHp) { // Check if player and elements exist
+        elements.playerName.textContent = player.name || 'Adventurer';
+        // Use nullish coalescing (??) to handle potential undefined/null values gracefully
+        elements.playerHp.textContent = `${player.hp ?? '--'}/${player.maxHp ?? '--'}`;
+        elements.playerBlock.textContent = player.block ?? 0;
+        elements.playerEnergy.textContent = `${player.energy ?? '-'}/${player.maxEnergy ?? '-'}`;
+        elements.playerMomentum.textContent = player.momentum ?? 0;
+        elements.playerMaxMomentum.textContent = player.maxMomentum ?? 10; // Default if missing
+        console.log(`[UI] Player stats updated: HP=${elements.playerHp.textContent}, Block=${elements.playerBlock.textContent}, Energy=${elements.playerEnergy.textContent}, Momentum=${elements.playerMomentum.textContent}/${elements.playerMaxMomentum.textContent}`);
     } else {
-        console.warn("[UI] Element with ID 'enemy' (the container) not found.");
+        console.warn('[UI] updateStatsUI called without player object or player elements not found.');
+        // Optionally clear or set default values if player is null
+        if (elements.playerHp) {
+            elements.playerName.textContent = 'Adventurer';
+            elements.playerHp.textContent = '--/--';
+            elements.playerBlock.textContent = '0';
+            elements.playerEnergy.textContent = '-/-';
+            elements.playerMomentum.textContent = '0';
+            elements.playerMaxMomentum.textContent = '10';
+        }
     }
-    // console.debug('[UI] Stats UI update complete.');
+
+    // Update Enemy Stats
+    if (enemy && elements.enemyHp) { // Check if enemy and elements exist
+        elements.enemyName.textContent = enemy.name || 'Enemy';
+        elements.enemyHp.textContent = `${enemy.hp ?? '--'}/${enemy.maxHp ?? '--'}`;
+        elements.enemyEnergy.textContent = `${enemy.energy ?? '-'}/${enemy.maxEnergy ?? '-'}`;
+        // Update enemy block if you have an element for it
+        // elements.enemyBlock.textContent = enemy.block ?? 0;
+        console.log(`[UI] Enemy stats updated: HP=${elements.enemyHp.textContent}, Energy=${elements.enemyEnergy.textContent}`);
+
+        // Update enemy background image if applicable
+        const enemyElement = document.getElementById('enemy');
+        if (enemyElement && enemy.id) {
+            const imagePath = `images/enemies/${enemy.id}.png`;
+            // Basic check if image likely exists (more robust checks might be needed)
+            // For simplicity, we just set it. Add error handling if needed.
+            enemyElement.style.backgroundImage = `url('${imagePath}'), url('images/enemies/placeholder.png')`; // Fallback to placeholder
+        }
+
+    } else {
+        // Clear enemy stats if no enemy or elements not found
+        if(elements.enemyHp) {
+            elements.enemyName.textContent = 'Enemy';
+            elements.enemyHp.textContent = '--/--';
+            elements.enemyEnergy.textContent = '-/-';
+            // Clear enemy block if applicable
+            // elements.enemyBlock.textContent = '0';
+        }
+        const enemyElement = document.getElementById('enemy');
+        if (enemyElement) {
+            enemyElement.style.backgroundImage = `url('images/enemies/placeholder.png')`; // Reset to placeholder
+        }
+         console.log('[UI] Enemy stats cleared or enemy object/elements not found.');
+    }
+    console.log('[UI] Stats UI update complete.');
 }
 
 export function updateFloorInfoUI(floor) {
@@ -408,18 +415,22 @@ export function updateDeckViewUI(player) {
     const statsHTML = `
         <div class="player-stat">
             <div>HP</div>
-            <div class="stat-value">${player.hp}/${player.maxHp}</div>
+            <div class="stat-value">${player.hp ?? '--'}/${player.maxHp ?? '--'}</div>
         </div>
         <div class="player-stat">
-            <div>Energy</div>
-            <div class="stat-value">${player.maxEnergy}</div>
+            <div>Max Energy</div>
+            <div class="stat-value">${player.maxEnergy ?? '-'}</div>
         </div>
         <div class="player-stat">
             <div>Strength</div>
-            <div class="stat-value">${player.strength || 0}</div>
+            <div class="stat-value">${player.strength ?? 0}</div>
         </div>
-        <div>Block: <span id="player-block">${player.block || 0}</span></div>
-        <!-- Add more stats as needed -->
+         <div class="player-stat">
+            <div>Max Momentum</div>
+            <div class="stat-value">${player.maxMomentum ?? 10}</div>
+        </div>
+        <!-- Add Block if needed in deck view -->
+        <!-- <div>Block: <span id="player-block">${player.block ?? 0}</span></div> -->
     `;
     elements.playerStats.innerHTML = statsHTML;
 

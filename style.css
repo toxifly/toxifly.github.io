@@ -90,17 +90,30 @@ h2 {
 .stats {
     display: flex;
     gap: 15px;
+    align-items: center; /* Vertically align items if stat blocks differ in height */
 }
 
 .stat {
     display: flex;
     flex-direction: column;
     align-items: center;
+    min-width: 50px; /* Prevent collapsing */
+    text-align: center; /* Center text just in case */
+}
+
+/* Style for the label (e.g., "HP", "Block") within a stat block in the main view */
+.stat > div:first-child {
+    font-size: 12px; /* Make label slightly smaller */
+    color: #aaa;    /* Use a less prominent color */
+    margin-bottom: 3px; /* Add small space between label and value */
+    line-height: 1; /* Ensure consistent line height */
 }
 
 .stat-value {
     font-weight: bold;
     font-size: 18px;
+    color: #eee; /* Ensure the value color is explicitly set */
+    line-height: 1.2; /* Adjust line height if needed */
 }
 
 .character-name {
@@ -565,4 +578,32 @@ button:disabled {
 
 .reward-options .done-button:hover {
     background-color: #218838;
+}
+
+/* Make deck builder player stats selectors more specific */
+#deck-builder .player-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+#deck-builder .player-stat {
+    background-color: #222;
+    padding: 10px 15px;
+    border-radius: 5px;
+    min-width: 100px;
+    text-align: center;
+    border: 1px solid #444;
+}
+#deck-builder .player-stat div:first-child {
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 5px;
+}
+#deck-builder .player-stat .stat-value {
+    font-size: 16px;
+    color: #eee; /* Explicitly set color here too */
 } 
