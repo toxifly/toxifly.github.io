@@ -39,7 +39,7 @@
             </div>
 
             <!-- Player Area -->
-            <div class="character player" id="player">
+            <div id="player" class="character player">
                 <div class="character-name" id="player-name">Adventurer</div>
                 <div class="stats">
                     <div class="stat">
@@ -64,6 +64,16 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Player Hand and Next Card Preview -->
+            <div class="player-controls-area" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div id="player-hand" class="hand">
+                    <!-- Card in hand appears here -->
+                </div>
+                <div id="next-card-preview" class="next-card-container">
+                    <!-- Next card preview appears here -->
+                </div>
+            </div>
         </div>
 
         <!-- Control Buttons -->
@@ -71,11 +81,6 @@
             <button id="start-battle-btn">Start Battle</button>
             <button id="next-floor-btn" disabled>Next Floor</button>
             <button id="view-deck-btn">View Deck</button>
-        </div>
-
-        <!-- Player Hand Area -->
-        <div class="hand" id="player-hand">
-            <!-- Cards will be added here dynamically -->
         </div>
 
         <!-- Reward Screen -->
@@ -115,8 +120,8 @@
     <script type="module" src="utils.js"></script>
     <script type="module" src="cards.js"></script>
     <script type="module" src="enemies.js"></script>
-    <script type="module" src="ui.js"></script>
-    <script type="module" src="game.js"></script>
+    <script type="module" src="ui.js" defer></script>
+    <script type="module" src="game.js" defer></script>
 
 </body>
 </html>

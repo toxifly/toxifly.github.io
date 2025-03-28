@@ -12,6 +12,7 @@ export const elements = {
     playerMaxMomentum: document.getElementById('player-max-momentum'),
     playerHand: document.getElementById('player-hand'),
     player: document.getElementById('player'),
+    nextCardPreview: document.getElementById('next-card-preview'),
 
     enemyName: document.getElementById('enemy-name'),
     enemyHp: document.getElementById('enemy-hp'),
@@ -108,7 +109,7 @@ function createCardElement(cardTemplate) {
  * @param {string[]} hand - Array of card IDs in the player's hand.
  */
 export function updatePlayerHandUI(hand) {
-    console.log(`[UI] Updating player hand UI with ${hand.length} cards.`);
+    console.log(`[UI] Updating player hand UI with ${hand.length} card(s).`);
     elements.playerHand.innerHTML = '';
     hand.forEach(cardId => {
         const cardTemplate = getCardTemplate(cardId);
@@ -117,6 +118,8 @@ export function updatePlayerHandUI(hand) {
             return;
         }
         const cardElement = createCardElement(cardTemplate);
+        cardElement.style.cursor = 'default';
+        cardElement.style.pointerEvents = 'none';
         elements.playerHand.appendChild(cardElement);
     });
     console.log(`[UI] Player hand UI update complete.`);
@@ -495,4 +498,48 @@ export function showMomentumBurstEffect() {
             }
         }, 500); // Match transition duration
     }, 1000); // Duration the effect stays visible
+}
+
+/**
+ * Updates the next card preview UI.
+ * @param {string|null} nextCardId - The ID of the next card to draw, or null.
+ */
+export function updateNextCardPreviewUI(nextCardId) {
+    console.log(`[UI] Updating next card preview UI. Next card ID: ${nextCardId}`);
+    const previewContainer = elements.nextCardPreview;
+    if (!previewContainer) {
+        console.warn('[UI] Next card preview element not found.');
+        return;
+    }
+
+    previewContainer.innerHTML = ''; // Clear previous preview
+
+    if (nextCardId) {
+        const cardTemplate = getCardTemplate(nextCardId);
+        if (cardTemplate) {
+            const cardElement = createCardElement(cardTemplate);
+            cardElement.classList.add('next-card-preview-style'); // Add class for specific styling
+            // Maybe add text above/below it
+             const label = document.createElement('div');
+             label.textContent = 'Next Draw:';
+             label.style.textAlign = 'center';
+             label.style.marginBottom = '5px';
+             label.style.fontSize = '12px';
+             label.style.color = '#aaa';
+             previewContainer.appendChild(label);
+
+            previewContainer.appendChild(cardElement);
+        } else {
+            console.error(`[UI] Card template not found for next card ID: ${nextCardId}`);
+            previewContainer.textContent = 'Next: ???'; // Placeholder for error
+        }
+    } else {
+        // Handle null case (e.g., draw pile empty, needing shuffle)
+        previewContainer.textContent = 'Next: (Shuffle)';
+        previewContainer.style.textAlign = 'center';
+        previewContainer.style.color = '#aaa';
+        previewContainer.style.fontSize = '14px';
+        previewContainer.style.paddingTop = '50px'; // Center vertically roughly
+    }
+    console.log('[UI] Next card preview UI update complete.');
 } 

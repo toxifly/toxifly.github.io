@@ -93,6 +93,7 @@ h2 {
     margin-top: 20px;
     justify-content: center; /* Center cards in the hand area */
     min-height: 190px; /* Ensure space even when hand is empty */
+    min-width: 150px; /* Ensure space for one card */
 }
 
 .card {
@@ -423,4 +424,55 @@ button:disabled {
     cursor: pointer;
     color: #55ff55;
 }
-*/ 
+*/
+
+/* Container for the next card preview */
+.next-card-container {
+    position: absolute; /* Example: Position it relative to the battle area */
+    right: 20px; /* Example: Place on the right */
+    top: 250px;  /* Example: Align vertically */
+    width: 100px; /* Smaller width for preview */
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Add border/background if desired */
+    /* border: 1px dashed #777; */
+    /* padding: 5px; */
+}
+
+/* Styling for the card shown in the preview */
+.next-card-preview-style {
+    width: 80px;  /* Make preview smaller than hand card */
+    height: 115px;
+    border-width: 2px;
+    opacity: 0.8; /* Slightly faded */
+    transform: scale(0.9); /* Slightly smaller */
+    cursor: default; /* Not interactive */
+    pointer-events: none; /* Not interactive */
+    box-shadow: none; /* No hover effects needed */
+}
+
+/* Ensure preview content (name, desc) scales down */
+.next-card-preview-style .card-name {
+    font-size: 0.8em;
+}
+.next-card-preview-style .card-cost {
+    width: 18px;
+    height: 18px;
+    font-size: 0.7em;
+    top: 4px;
+    right: 4px;
+}
+.next-card-preview-style .card-description {
+    font-size: 0.7em;
+    padding: 3px;
+    max-height: 40%; /* Adjust as needed */
+}
+
+/* Prevent hover effect on the single card in hand if using auto-play */
+.hand .card:hover {
+    transform: none;
+    box-shadow: none;
+    cursor: default;
+} 

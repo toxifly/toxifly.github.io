@@ -14,7 +14,8 @@ import {
     showGameOverUI,
     hideGameOverUI,
     showDeckUI,
-    hideDeckUI
+    hideDeckUI,
+    updateNextCardPreviewUI
 } from './ui.js';
 import { getCardTemplate, CARD_TEMPLATES } from './cards.js';
 import { generateEnemyForFloor } from './enemies.js';
@@ -24,9 +25,10 @@ const MAX_FLOOR = 10;
 const PLAYER_STARTING_DECK = ['strike', 'strike', 'strike', 'defend', 'defend', 'defend', 'iron_wave', 'quick_slash'];
 const PLAYER_STARTING_HP = 50;
 const PLAYER_STARTING_ENERGY = 3;
-const HAND_SIZE = 5;
+const PLAYER_MAX_HAND_SIZE = 1;
+const ENEMY_HAND_SIZE = 5;
 const MAX_HAND_SIZE = 10;
-const BASE_DRAW = 5;
+const BASE_DRAW = 1;
 
 class CardBattler {
     constructor() {
@@ -176,14 +178,14 @@ class CardBattler {
              }
         }
 
-        console.log(`[Game] Player drawing up to ${HAND_SIZE} cards.`);
-        for (let i = 0; i < HAND_SIZE; i++) {
+        console.log(`[Game] Player drawing ${BASE_DRAW} card(s).`);
+        for (let i = 0; i < BASE_DRAW; i++) {
             this.drawCard();
         }
         console.log(`[Game] Player finished drawing. Hand size: ${this.player.hand.length}`);
 
         this.updateUI();
-        console.log('[Game] UI updated after drawing cards.');
+        console.log('[Game] UI updated after drawing card(s).');
 
         console.log('[Game] Scheduling automated player turn action...');
         setTimeout(() => this.playPlayerTurn(), 1000);
@@ -198,75 +200,74 @@ class CardBattler {
 
         await delay(500);
 
-        const playableCardIndex = this.player.hand.findIndex(cardId => {
-            const template = getCardTemplate(cardId);
-            return template && this.player.energy >= template.cost;
-        });
+        const playableCardIndex = this.player.hand.length > 0 ? 0 : -1;
+        const cardId = playableCardIndex !== -1 ? this.player.hand[playableCardIndex] : null;
+        const cardTemplate = cardId ? getCardTemplate(cardId) : null;
 
-        if (playableCardIndex !== -1) {
-            const cardId = this.player.hand[playableCardIndex];
-            const cardTemplate = getCardTemplate(cardId);
-
-            if (cardTemplate) {
-                let spentMomentum = 0;
-                if (cardTemplate.usesMomentum && this.player.momentum >= cardTemplate.momentumCost) {
-                    spentMomentum = cardTemplate.momentumCost;
-                    this.player.momentum -= spentMomentum;
-                    this.log(`Spent ${spentMomentum} momentum for ${cardTemplate.name}'s bonus effect.`, 'player');
-                }
-
-                this.player.energy -= cardTemplate.cost;
-
-                this.player.hand.splice(playableCardIndex, 1);
-                this.player.discardPile.push(cardId);
-
-                this.log(`Player plays ${cardTemplate.name} (Cost: ${cardTemplate.cost})`, 'player');
-                this.updateStats();
-
-                animateCardPlay(cardId, cardTemplate, true);
-                await delay(300);
-
-                if (cardTemplate.effect) {
-                    cardTemplate.effect(this, this.player, this.enemy, spentMomentum);
-                }
-
-                if (this.enemy.hp <= 0) {
-                    this.enemyDefeated();
-                    return;
-                }
-
-                let momentumGained = 0;
-                if (cardTemplate.cost === 0) {
-                    momentumGained = MOMENTUM_GAIN_ZERO_COST;
-                } else if (cardTemplate.cost === 1 || cardTemplate.cost === 2) {
-                    momentumGained = MOMENTUM_GAIN_DEFAULT;
-                }
-
-                if (momentumGained > 0) {
-                    this.player.momentum += momentumGained;
-                    this.log(`Gained ${momentumGained} momentum. (Total: ${this.player.momentum})`, 'player');
-                }
-
-                if (this.player.momentum >= MAX_MOMENTUM) {
-                    this.player.momentum = MAX_MOMENTUM;
-                    this.updateUI();
-                    await delay(100);
-                    showMomentumBurstEffect();
-                    await delay(1000);
-                    this.log('Maximum momentum reached! Ending turn.', 'system-warning');
-                    this.endPlayerTurn();
-                    return;
-                }
-
-                this.updateUI();
-
-                this.playPlayerTurn();
-            } else {
-                this.log(`Error: Card template not found for ID: ${cardId}`, 'error');
-                this.endPlayerTurn();
+        if (cardTemplate && this.player.energy >= cardTemplate.cost) {
+            let spentMomentum = 0;
+            if (cardTemplate.usesMomentum && this.player.momentum >= cardTemplate.momentumCost) {
+                spentMomentum = cardTemplate.momentumCost;
+                this.player.momentum -= spentMomentum;
+                this.log(`Spent ${spentMomentum} momentum for ${cardTemplate.name}'s bonus effect.`, 'player');
             }
+
+            this.player.energy -= cardTemplate.cost;
+
+            this.player.hand.splice(playableCardIndex, 1);
+            this.player.discardPile.push(cardId);
+
+            this.log(`Player plays ${cardTemplate.name} (Cost: ${cardTemplate.cost})`, 'player');
+            this.updateStats();
+
+            animateCardPlay(cardId, cardTemplate, true);
+            await delay(300);
+
+            if (cardTemplate.effect) {
+                cardTemplate.effect(this, this.player, this.enemy, spentMomentum);
+            }
+
+            if (this.enemy.hp <= 0) {
+                this.enemyDefeated();
+                return;
+            }
+
+            let momentumGained = 0;
+            if (cardTemplate.cost === 0) {
+                momentumGained = MOMENTUM_GAIN_ZERO_COST;
+            } else if (cardTemplate.cost === 1 || cardTemplate.cost === 2) {
+                momentumGained = MOMENTUM_GAIN_DEFAULT;
+            }
+
+            if (momentumGained > 0) {
+                this.player.momentum += momentumGained;
+                this.log(`Gained ${momentumGained} momentum. (Total: ${this.player.momentum})`, 'player');
+                if (this.player.momentum > MAX_MOMENTUM) {
+                    this.player.momentum = MAX_MOMENTUM;
+                }
+            }
+
+            console.log('[Game] Player played a card, drawing replacement...');
+            this.drawCard();
+
+            this.updateUI();
+
+            if (this.player.momentum >= MAX_MOMENTUM) {
+                await delay(100);
+                showMomentumBurstEffect();
+                await delay(1000);
+                this.log('Maximum momentum reached! Ending turn.', 'system-warning');
+                this.endPlayerTurn();
+                return;
+            }
+
+            this.playPlayerTurn();
         } else {
-            this.log('Player has no more playable cards.', 'player');
+            if (this.player.hand.length > 0) {
+                this.log(`Player cannot afford ${cardTemplate.name} (Cost: ${cardTemplate.cost}, Energy: ${this.player.energy}).`, 'player');
+            } else {
+                this.log('Player has no card in hand.', 'player');
+            }
             this.endPlayerTurn();
         }
     }
@@ -327,9 +328,9 @@ class CardBattler {
              }
         }
 
-        console.log(`[Game] Enemy drawing up to ${HAND_SIZE} cards.`);
+        console.log(`[Game] Enemy drawing up to ${ENEMY_HAND_SIZE} cards.`);
         this.enemy.hand = [];
-        for (let i = 0; i < HAND_SIZE; i++) {
+        for (let i = 0; i < ENEMY_HAND_SIZE; i++) {
             if (this.enemy.drawPile.length === 0 && this.enemy.discardPile.length > 0) {
                 console.log(`[Game] Enemy draw pile empty. Shuffling discard pile (${this.enemy.discardPile.length} cards)...`);
                 this.enemy.drawPile = shuffleArray([...this.enemy.discardPile]);
@@ -427,24 +428,9 @@ class CardBattler {
     }
 
     drawCard() {
-        if (this.player.hand.length >= MAX_HAND_SIZE) {
-            console.warn(`[Game] Player hand is full (${this.player.hand.length}/${MAX_HAND_SIZE}). Burning next card.`);
-            this.log(`${this.player.name}'s hand is full! Card burned.`, 'player');
-            
-            if (this.player.drawPile.length === 0 && this.player.discardPile.length > 0) {
-                console.log(`[Game] Player draw pile empty. Shuffling discard pile (${this.player.discardPile.length} cards) before burning...`);
-                this.player.drawPile = shuffleArray([...this.player.discardPile]);
-                this.player.discardPile = [];
-                this.log(`${this.player.name} shuffles their discard pile.`, 'player');
-                console.log(`[Game] Player discard pile shuffled into draw pile. Draw size: ${this.player.drawPile.length}`);
-            }
-            
-            if (this.player.drawPile.length > 0) {
-                const burnedCard = this.player.drawPile.pop();
-                console.log(`[Game] Burned card: ${burnedCard}. Draw pile size: ${this.player.drawPile.length}`);
-            } else {
-                 console.warn('[Game] Player hand full, but no cards in draw pile to burn.');
-             }
+        if (this.player.hand.length >= PLAYER_MAX_HAND_SIZE) {
+            console.log(`[Game] Player hand already full (${this.player.hand.length}/${PLAYER_MAX_HAND_SIZE}). Not drawing.`);
+            this.updateNextCardPreview();
             return;
         }
 
@@ -464,6 +450,22 @@ class CardBattler {
             console.log(`[Game] Player has no cards left in draw or discard piles.`);
             this.log(`${this.player.name} has no cards left to draw.`, 'player');
         }
+
+        this.updateNextCardPreview();
+    }
+
+    updateNextCardPreview() {
+        let nextCardId = null;
+        if (this.player.drawPile.length > 0) {
+            nextCardId = this.player.drawPile[this.player.drawPile.length - 1];
+        } else if (this.player.discardPile.length > 0) {
+             console.log('[Game] Draw pile empty, next card is uncertain (after shuffle).');
+             nextCardId = null;
+        } else {
+             console.log('[Game] No cards in draw or discard pile.');
+        }
+         console.log(`[Game] Updating next card preview. Next card ID: ${nextCardId}`);
+        updateNextCardPreviewUI(nextCardId);
     }
 
     dealDamage(source, target, amount, ignoreBlock = false) {
@@ -690,10 +692,11 @@ class CardBattler {
     }
 
     updateUI() {
-        console.log('[Game] Updating UI (Stats and Hand)...');
+        console.log('[Game] Updating UI (Stats, Hand, Next Card)...');
         this.updateStats();
         updatePlayerHandUI(this.player.hand);
-        console.log('[Game] updatePlayerHandUI called.');
+        this.updateNextCardPreview();
+        console.log('[Game] updatePlayerHandUI & updateNextCardPreviewUI called.');
     }
 
     updateStats() {
