@@ -360,14 +360,12 @@ export function showRewardUI(rewardCardIds, currentPickNum, totalPicks, onReward
     console.log('[UI] Reward UI setup complete for this pick.');
 }
 
-export function showGameOverUI(victory, floor) {
-    console.log(`[UI] Showing Game Over UI. Victory: ${victory}, Floor: ${floor}`);
+export function showGameOverUI(floor) {
+    console.log(`[UI] Showing Game Over UI. Floor: ${floor}`);
     elements.gameOver.style.display = 'block';
-    if (victory) {
-        elements.gameOverMessage.textContent = `Victory! You conquered the 10 floors!`;
-    } else {
-        elements.gameOverMessage.textContent = `Defeat! You made it to floor ${floor}.`;
-    }
+    // Always show the defeat message
+    elements.gameOverMessage.textContent = `Defeat! You made it to floor ${floor}.`;
+
     elements.startBattleBtn.disabled = true;
     elements.nextFloorBtn.disabled = true;
 }

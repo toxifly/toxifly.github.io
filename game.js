@@ -34,7 +34,6 @@ import {
     NUM_REWARD_PICKS
 } from './constants.js';
 
-const MAX_FLOOR = 10;
 const PLAYER_STARTING_DECK = ['strike', 'strike', 'strike', 'defend', 'defend', 'defend', 'iron_wave', 'quick_slash'];
 const PLAYER_STARTING_HP = 50;
 const PLAYER_STARTING_ENERGY = 3;
@@ -616,7 +615,7 @@ class CardBattler {
                 return true;
             } else {
                 console.log('[Game] Player defeated.');
-                this.gameOver(false);
+                this.gameOver();
                 return true;
             }
         }
@@ -631,15 +630,11 @@ class CardBattler {
         this.log(`${this.enemy.name} has been defeated!`, 'reward');
         this.updateStats();
 
-        if (this.currentFloor >= MAX_FLOOR) {
-             console.log(`[Game] Max floor (${MAX_FLOOR}) reached. Triggering victory.`);
-             this.gameOver(true);
-        } else {
-            console.log('[Game] Showing reward screen and enabling next floor button.');
-            this.startRewardPhase();
-            elements.nextFloorBtn.disabled = false;
-            elements.viewDeckBtn.disabled = false;
-        }
+        console.log('[Game] Showing reward screen and enabling next floor button.');
+        this.startRewardPhase();
+        elements.nextFloorBtn.disabled = false;
+        elements.viewDeckBtn.disabled = false;
+
         console.log('[Game] Enemy defeat processing complete.');
         this.player.berserk = 0;
     }
@@ -731,16 +726,13 @@ class CardBattler {
         console.log(`[Game] Ready for Floor ${this.currentFloor}.`);
     }
 
-    gameOver(victory) {
-        console.log(`[Game] Game Over. Victory: ${victory}`);
+    gameOver() {
+        console.log(`[Game] Game Over.`);
         this.inBattle = false;
         console.log('[Game] Battle state set: inBattle=false');
-        showGameOverUI(victory, this.currentFloor);
-        if (victory) {
-            this.log('Congratulations! You have conquered the spire!', 'reward');
-        } else {
-            this.log('Game over! You have been defeated.', 'system');
-        }
+        showGameOverUI(false, this.currentFloor);
+        this.log('Game over! You have been defeated.', 'system');
+
         elements.startBattleBtn.disabled = true;
         elements.nextFloorBtn.disabled = true;
         elements.viewDeckBtn.disabled = true;
@@ -786,7 +778,7 @@ class CardBattler {
 
     playerDefeated() {
         console.log('[Game] Player has been defeated.');
-        this.gameOver(false);
+        this.gameOver();
     }
 }
 
