@@ -257,10 +257,29 @@ button:disabled {
     flex-direction: column;
     align-items: center;
     gap: 15px;
-    margin-top: 20px;
-    border: 1px dashed #55ff55;
     padding: 20px;
-    background-color: #1a1a1a;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.reward-container.modal-active {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.reward-container h2 {
+    color: white;
+    margin-bottom: 20px;
+    text-shadow: 1px 1px 2px black;
 }
 
 .reward-options {
@@ -268,6 +287,23 @@ button:disabled {
     flex-wrap: wrap;
     gap: 15px;
     justify-content: center;
+    align-items: center;
+}
+
+.reward-options .skip-button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s;
+}
+
+.reward-options .skip-button:hover {
+    background-color: #5a6268;
 }
 
 .game-over {
@@ -474,4 +510,36 @@ button:disabled {
 #player-hand .card:hover {
     transform: none;
     box-shadow: none;
+}
+
+/* Style for the picks remaining info */
+#reward-picks-info {
+    color: #ffff55; /* Yellow color */
+    font-size: 1.1em;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+/* Style for selected cards in reward screen */
+.reward-options .card.selected {
+    border-color: #55ff55; /* Highlight selected card */
+    box-shadow: 0 0 15px rgba(85, 255, 85, 0.7);
+    /* Opacity and pointer-events are handled inline in JS */
+}
+
+/* Style for the Done button */
+.reward-options .done-button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #28a745; /* Green color */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s;
+}
+
+.reward-options .done-button:hover {
+    background-color: #218838;
 } 

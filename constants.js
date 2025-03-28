@@ -31,4 +31,10 @@ export const DELAY_TURN_END = 800;
 /** Short delay before the Momentum Burst visual effect appears. */
 export const DELAY_MOMENTUM_BURST_PRE = 100;
 /** Delay after the Momentum Burst visual effect, before ending the turn. */
-export const DELAY_MOMENTUM_BURST_POST = 1000; 
+export const DELAY_MOMENTUM_BURST_POST = 1000;
+
+/** Number of card options offered as a reward. */
+export const NUM_REWARD_CHOICES = 4;
+
+/** Number of cards the player can pick from the reward options. */
+export const NUM_REWARD_PICKS = 2; 

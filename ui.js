@@ -331,11 +331,33 @@ export function getCardTypeColor(type) {
     }
 }
 
-export function showRewardUI(rewardCardIds, onRewardChosen) {
-    console.log('[UI] Showing reward UI with cards:', rewardCardIds);
+export function showRewardUI(rewardCardIds, currentPickNum, totalPicks, onRewardChosen) {
+    console.log(`[UI] Showing reward UI for pick ${currentPickNum}/${totalPicks}. Cards: ${rewardCardIds.join(', ')}`);
+    elements.rewardContainer.classList.add('modal-active');
     elements.rewardContainer.style.display = 'flex';
-    elements.rewardOptions.innerHTML = '';
+    elements.rewardOptions.innerHTML = ''; // Clear previous options
 
+    // Update the title or info text
+    const titleElement = elements.rewardContainer.querySelector('h2');
+    const picksInfo = document.getElementById('reward-picks-info');
+    if (titleElement) {
+        titleElement.textContent = `Choose Reward (Pick ${currentPickNum} of ${totalPicks})`;
+    }
+    if (picksInfo) {
+         picksInfo.style.display = 'none'; // Hide the old "Picks remaining" text if using title
+        // OR update it: picksInfo.textContent = `Pick ${currentPickNum} of ${totalPicks}`;
+    }
+
+    // Internal function to finalize this stage's choice
+    function finalizeChoice(chosenCardId) {
+        console.log(`[UI] Finalizing choice for pick ${currentPickNum}: ${chosenCardId}`);
+        elements.rewardContainer.style.display = 'none';
+        elements.rewardContainer.classList.remove('modal-active');
+        console.log('[UI] Reward UI hidden for this pick.');
+        onRewardChosen(chosenCardId); // Pass the single chosen card ID (or null)
+    }
+
+    // Add card elements
     rewardCardIds.forEach(cardId => {
         const cardTemplate = getCardTemplate(cardId);
         if (!cardTemplate) {
@@ -343,26 +365,28 @@ export function showRewardUI(rewardCardIds, onRewardChosen) {
             return;
         }
         const cardElement = createCardElement(cardTemplate);
+
+        // Listener for picking THIS card
         cardElement.addEventListener('click', () => {
-            console.log(`[UI] Reward card chosen: ${cardId}`);
-            onRewardChosen(cardId);
-            elements.rewardContainer.style.display = 'none';
-            console.log('[UI] Reward UI hidden after choice.');
+            console.log(`[UI] Reward card picked: ${cardId}`);
+            finalizeChoice(cardId); // Finalize with the chosen card ID
         });
         elements.rewardOptions.appendChild(cardElement);
     });
 
-    // Add skip reward option
+    // Add Skip button for THIS pick
     const skipButton = document.createElement('button');
-    skipButton.textContent = 'Skip Reward';
+    // Text can be "Skip Pick" or just "Skip"
+    skipButton.textContent = `Skip Pick ${currentPickNum}`;
+    skipButton.classList.add('skip-button');
     skipButton.addEventListener('click', () => {
-        console.log('[UI] Skip reward chosen.');
-        onRewardChosen(null); // Pass null to indicate skipping
-        elements.rewardContainer.style.display = 'none';
-        console.log('[UI] Reward UI hidden after skip.');
+        console.log(`[UI] Skip chosen for pick ${currentPickNum}.`);
+        finalizeChoice(null); // Finalize with null for skip
     });
+    // Prepend or append based on desired layout, append is common
     elements.rewardOptions.appendChild(skipButton);
-    console.log('[UI] Reward UI setup complete.');
+
+    console.log('[UI] Reward UI setup complete for this pick.');
 }
 
 export function showGameOverUI(victory, floor) {

@@ -29,7 +29,9 @@ import {
     DELAY_POST_EFFECT,
     DELAY_TURN_END,
     DELAY_MOMENTUM_BURST_PRE,
-    DELAY_MOMENTUM_BURST_POST
+    DELAY_MOMENTUM_BURST_POST,
+    NUM_REWARD_CHOICES,
+    NUM_REWARD_PICKS
 } from './constants.js';
 
 const MAX_FLOOR = 10;
@@ -49,6 +51,7 @@ class CardBattler {
         this.currentFloor = 1;
         this.inBattle = false;
         this.battleTurn = 0;
+        this.rewardPicksMade = 0;
 
         // Bind event listeners from UI elements
         console.log('[Game] Binding UI event listeners...');
@@ -608,98 +611,92 @@ class CardBattler {
              this.gameOver(true);
         } else {
             console.log('[Game] Showing reward screen and enabling next floor button.');
-            this.showReward();
+            this.startRewardPhase();
             elements.nextFloorBtn.disabled = false;
             elements.viewDeckBtn.disabled = false;
         }
         console.log('[Game] Enemy defeat processing complete.');
     }
 
-    showReward() {
-        console.log('[Game] Generating rewards...');
+    startRewardPhase() {
+        console.log('[Game] Starting reward phase.');
+        this.rewardPicksMade = 0;
+        this.presentSingleRewardChoice();
+    }
+
+    presentSingleRewardChoice() {
+        if (this.rewardPicksMade >= NUM_REWARD_PICKS) {
+            console.error("[Game] Attempted to present reward choice when all picks are made.");
+            this.nextFloor();
+            return;
+        }
+        console.log(`[Game] Presenting reward choice ${this.rewardPicksMade + 1} of ${NUM_REWARD_PICKS}`);
+
+        const availableCards = Object.values(CARD_TEMPLATES).filter(card => card.rarity !== 'Starter');
+        const shuffledCards = shuffleArray([...availableCards]);
         const rewardCardIds = [];
-        const rarities = ['common', 'uncommon', 'rare'];
-
-        let commonChance = 0.6;
-        let uncommonChance = 0.3;
-        let rareChance = 0.1;
-
-        const floorBonus = Math.min(this.currentFloor * 0.02, 0.2);
-        commonChance = Math.max(0.1, commonChance - floorBonus);
-        rareChance += floorBonus / 2;
-        uncommonChance = 1 - commonChance - rareChance;
-
-        console.log('[Game] Reward rarity weights:', { commonChance, uncommonChance, rareChance });
-
-        for (let i = 0; i < 3; i++) {
-            let selectedRarity;
-            const roll = Math.random();
-             console.log(`[Game] Reward roll ${i+1}: ${roll.toFixed(3)}`);
-
-            if (roll < commonChance) selectedRarity = 'common';
-            else if (roll < commonChance + uncommonChance) selectedRarity = 'uncommon';
-            else selectedRarity = 'rare';
-             console.log(`[Game] Selected rarity: ${selectedRarity}`);
-
-            const possibleCards = CARD_TEMPLATES.filter(card => card.rarity === selectedRarity);
-            if (possibleCards.length === 0) {
-                 i--; continue;
-            }
-
-            let cardTemplate;
-            do {
-                 cardTemplate = possibleCards[Math.floor(Math.random() * possibleCards.length)];
-            } while (rewardCardIds.includes(cardTemplate.id));
-
-             console.log(`[Game] Chosen reward card ${i+1}: ${cardTemplate.id}`);
+        for (let i = 0; i < NUM_REWARD_CHOICES && i < shuffledCards.length; i++) {
+            const cardTemplate = shuffledCards[i];
+             console.log(`[Game] Offering reward card for pick ${this.rewardPicksMade + 1}: ${cardTemplate.id}`);
             rewardCardIds.push(cardTemplate.id);
         }
 
-        console.log('[Game] Displaying reward UI with cards:', rewardCardIds);
-        showRewardUI(rewardCardIds, this.handleRewardChoice.bind(this));
+        console.log(`[Game] Displaying reward UI for pick ${this.rewardPicksMade + 1}. Cards: ${rewardCardIds.join(', ')}`);
+        showRewardUI(
+            rewardCardIds,
+            this.rewardPicksMade + 1,
+            NUM_REWARD_PICKS,
+            this.handleSingleRewardChoice.bind(this)
+        );
     }
 
-    handleRewardChoice(chosenCardId) {
-        console.log(`[Game] Handling reward choice. Chosen card ID: ${chosenCardId}`);
+    handleSingleRewardChoice(chosenCardId) {
+        console.log(`[Game] Handling reward choice ${this.rewardPicksMade + 1}. Chosen card ID: ${chosenCardId}`);
+
         if (chosenCardId) {
             this.player.deck.push(chosenCardId);
             const cardTemplate = getCardTemplate(chosenCardId);
-            this.log(`Added ${cardTemplate.name} to your deck!`, 'reward');
-            console.log(`[Game] Added ${chosenCardId} to player deck. New deck size: ${this.player.deck.length}`);
+            this.log(`Added ${cardTemplate.name} to your deck! (Pick ${this.rewardPicksMade + 1}/${NUM_REWARD_PICKS})`, 'reward');
+            console.log(`[Game] Added ${chosenCardId} to player deck.`);
         } else {
-            this.log('Skipped card reward.', 'system');
-            console.log('[Game] Player skipped reward.');
+            this.log(`Skipped reward pick ${this.rewardPicksMade + 1}/${NUM_REWARD_PICKS}.`, 'system');
+            console.log(`[Game] Player skipped pick ${this.rewardPicksMade + 1}.`);
         }
-        console.log('[Game] Reward choice handled.');
+
+        this.rewardPicksMade++;
+
+        if (this.rewardPicksMade < NUM_REWARD_PICKS) {
+            console.log('[Game] More picks remaining, presenting next choice.');
+            this.presentSingleRewardChoice();
+        } else {
+            console.log('[Game] All reward picks made. Proceeding to next floor.');
+            this.nextFloor();
+        }
     }
 
     nextFloor() {
         console.log(`[Game] Advancing to next floor from floor ${this.currentFloor}.`);
+        if (elements.rewardContainer.style.display !== 'none') {
+            elements.rewardContainer.style.display = 'none';
+            elements.rewardContainer.classList.remove('modal-active');
+        }
+
+        elements.nextFloorBtn.disabled = true;
         this.currentFloor++;
         updateFloorInfoUI(this.currentFloor);
 
-        const hpBeforeHeal = this.player.hp;
-        const healAmount = Math.min(this.player.maxHp - this.player.hp, Math.floor(this.player.maxHp * 0.3));
-        if (healAmount > 0) {
-            this.player.hp += healAmount;
-            this.log(`You rest and recover ${healAmount} HP.`, 'reward');
-            console.log(`[Game] Player healed for ${healAmount} HP. HP: ${hpBeforeHeal} -> ${this.player.hp}`);
-            showHealEffect(elements.player, healAmount);
-        } else {
-            console.log('[Game] Player already at max HP or heal amount is zero. No healing applied.');
-        }
+        console.log('[Game] Healing player slightly between floors.');
+        const healAmount = Math.min(5, Math.floor(this.player.maxHp * 0.1));
+        this.player.hp += healAmount;
+        showHealEffect(elements.player, healAmount);
+        this.log(`Rested slightly, healed ${healAmount} HP.`, 'system');
 
-        console.log('[Game] Generating enemy for the new floor...');
-        this.generateEnemy();
-        this.updateUI();
-        console.log('[Game] UI updated for new floor.');
+        console.log('[Game] Generating enemy for the new floor.');
+        this.enemy = generateEnemyForFloor(this.currentFloor);
+        this.updateStats();
 
         elements.startBattleBtn.disabled = false;
-        elements.nextFloorBtn.disabled = true;
-        console.log('[Game] Buttons updated for new floor (Start enabled, Next disabled).');
-
-        this.log(`Entering Floor ${this.currentFloor}...`, 'system');
-        console.log(`[Game] Entered Floor ${this.currentFloor}. Ready for player to start battle.`);
+        console.log(`[Game] Ready for Floor ${this.currentFloor}.`);
     }
 
     gameOver(victory) {

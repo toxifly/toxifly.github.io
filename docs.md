@@ -23,6 +23,10 @@ Contains constant values used across the application.
     *   **Purpose:** Defines the amount of momentum gained from playing a 0-cost card (currently 2).
 4.  **`MOMENTUM_GAIN_DEFAULT`**
     *   **Purpose:** Defines the amount of momentum gained from playing a 1 or 2-cost card (currently 1).
+5.  **`NUM_REWARD_CHOICES`**
+    *   **Purpose:** The number of card options presented to the player after winning a battle. Default: `4`.
+6.  **`NUM_REWARD_PICKS`**
+    *   **Purpose:** The maximum number of cards the player can select from the offered reward choices. Default: `2`.
 
 ## `utils.js`
 
@@ -128,13 +132,15 @@ Handles all interactions with the Document Object Model (DOM), updating the user
     *   **Output:** None.
     *   **Side Effects:** Creates and removes a temporary `div` containing an `img` element (`/images/momentum-burst.png`) in the `document.body`. Logs the effect being shown.
 
-12. **`showRewardUI(rewardCardIds, onRewardChosen)`**
-    *   **Purpose:** Displays the reward screen, allowing the player to choose one card from a selection or skip the reward.
+12. **`showRewardUI(rewardCardIds, currentPickNum, totalPicks, onRewardChosen)`**
+    *   **Purpose:** Displays the reward screen as a modal overlay for a single pick stage. Allows the player to choose *one* card from the selection or skip the current pick.
     *   **Input:**
-        *   `rewardCardIds` (Array) - An array of card IDs offered as rewards.
-        *   `onRewardChosen` (Function) - A callback function that is executed when the player makes a choice. It receives the chosen card ID (or `null` if skipped) as an argument.
+        *   `rewardCardIds` (Array) - An array of card IDs offered for this specific pick stage.
+        *   `currentPickNum` (Number) - The number of the current pick stage (e.g., 1 for the first pick).
+        *   `totalPicks` (Number) - The total number of picks allowed in the reward phase.
+        *   `onRewardChosen` (Function) - A callback function executed when the player makes a choice (clicks a card or the skip button). It receives the chosen card ID (or `null` if skipped) as an argument for this single pick.
     *   **Output:** None.
-    *   **Side Effects:** Makes the `elements.rewardContainer` visible, populates `elements.rewardOptions` with card elements and a skip button, and adds event listeners to them. Logs the UI display process and the choice made.
+    *   **Side Effects:** Makes `elements.rewardContainer` visible with modal styling. Updates title/info text. Populates `elements.rewardOptions` with card elements and a skip button for the current stage. Adds event listeners. Hides the modal and executes the callback upon choice.
 
 13. **`showGameOverUI(victory, floor)`**
     *   **Purpose:** Displays the game over screen with a victory or defeat message.
@@ -167,6 +173,30 @@ Handles all interactions with the Document Object Model (DOM), updating the user
     *   **Input:** `player` (Object) - The player object containing the deck and stats.
     *   **Output:** None.
     *   **Side Effects:** Clears and repopulates `elements.deckGrid`, `elements.deckStats`, and `elements.playerStats`. Groups identical cards and displays counts. Sorts cards for display. Logs the update process.
+
+18. **`startRewardPhase()`**
+    *   **Purpose:** Initializes the sequential reward picking process after a battle win. Resets the pick counter and calls `presentSingleRewardChoice` for the first pick.
+    *   **Input:** None.
+    *   **Output:** None.
+    *   **Side Effects:** Resets `this.rewardPicksMade`, calls `presentSingleRewardChoice`.
+
+19. **`presentSingleRewardChoice()`**
+    *   **Purpose:** Generates a set of `NUM_REWARD_CHOICES` card options for the current reward pick stage and displays them using `UI.showRewardUI`.
+    *   **Input:** None.
+    *   **Output:** None.
+    *   **Side Effects:** Calls `shuffleArray`, `getCardTemplate`, `UI.showRewardUI`.
+
+20. **`handleSingleRewardChoice(chosenCardId)`**
+    *   **Purpose:** Callback executed after the player makes a choice for a single reward pick stage. Adds the card to the deck (if chosen), logs the action, increments the pick counter. If more picks remain, calls `presentSingleRewardChoice` again; otherwise, calls `nextFloor`.
+    *   **Input:** `chosenCardId` (String | null) - The ID of the chosen card for this stage, or `null` if skipped.
+    *   **Output:** None.
+    *   **Side Effects:** Modifies `player.deck`, logs choice, increments `this.rewardPicksMade`, potentially calls `presentSingleRewardChoice` or `nextFloor`.
+
+21. **`nextFloor()`**
+    *   **Purpose:** Advances the game to the next floor. Called automatically after the entire reward phase (all picks made/skipped). Hides reward UI, disables 'Next Floor' button, increments floor count, heals player, generates enemy, updates UI, enables battle start button.
+    *   **Input:** None.
+    *   **Output:** None.
+    *   **Side Effects:** Hides reward UI, disables `elements.nextFloorBtn`, increments `currentFloor`, modifies `player.hp`, calls `generateEnemy`, updates UI (floor info, stats, buttons), shows heal effect, logs floor progression, enables `elements.startBattleBtn`.
 
 ## `game.js`
 
@@ -283,17 +313,17 @@ The main class orchestrating the game.
     *   **Output:** None.
     *   **Side Effects:** Calls `UI.showRewardUI` with generated card IDs and the `handleRewardChoice` callback. Logs reward generation steps.
 
-15. **`handleRewardChoice(chosenCardId)`**
-    *   **Purpose:** Callback function executed when the player selects a reward card or skips. Adds the chosen card to the player's deck or logs the skip.
-    *   **Input:** `chosenCardId` (String | null) - The ID of the chosen card, or `null` if skipped.
+15. **`handleRewardChoice(chosenCardIds)`**
+    *   **Purpose:** Callback function executed after the player finalizes their reward selection via the UI. Adds the chosen cards (if any) to the player's deck. Automatically proceeds to the next floor.
+    *   **Input:** `chosenCardIds` (Array) - An array containing the IDs of the chosen cards (empty if skipped).
     *   **Output:** None.
-    *   **Side Effects:** Modifies `player.deck` if a card is chosen, logs the choice.
+    *   **Side Effects:** Modifies `player.deck` if cards were chosen, logs the choices, calls `nextFloor()`.
 
 16. **`nextFloor()`**
-    *   **Purpose:** Advances the game to the next floor. Heals the player slightly, generates a new enemy, updates UI, and enables the battle start button.
+    *   **Purpose:** Advances the game to the next floor. Called automatically after reward selection/skip. Disables the 'Next Floor' button, increments floor count, heals the player slightly, generates a new enemy, updates UI, and enables the battle start button.
     *   **Input:** None.
     *   **Output:** None.
-    *   **Side Effects:** Increments `currentFloor`, modifies `player.hp`, calls `generateEnemy`, updates UI (floor info, stats, buttons), shows heal effect, logs floor progression.
+    *   **Side Effects:** Disables `elements.nextFloorBtn`, increments `currentFloor`, modifies `player.hp`, calls `generateEnemy`, updates UI (floor info, stats, buttons), shows heal effect, logs floor progression.
 
 17. **`gameOver(victory)`**
     *   **Purpose:** Ends the current game session, displaying either a victory or defeat message on the game over screen. Disables game interaction buttons.
@@ -339,6 +369,12 @@ The main class orchestrating the game.
     *   **Output:** None.
     *   **Side Effects:** Calls `UI.logMessage`.
 
+24. **`generateRewards()`**
+    *   **Purpose:** Generates reward options after a battle is won. Selects `NUM_REWARD_CHOICES` unique, non-starter cards and displays them using `UI.showRewardUI`, allowing `NUM_REWARD_PICKS`.
+    *   **Input:** None.
+    *   **Output:** None.
+    *   **Side Effects:** Logs the reward generation process, calls `UI.showRewardUI`.
+
 ## `enemies.js`
 
 Defines enemy templates and logic for generating enemies based on game progression.
@@ -346,30 +382,4 @@ Defines enemy templates and logic for generating enemies based on game progressi
 ### Variables
 
 1.  **`ENEMIES`**
-    *   **Purpose:** An array of template objects, each defining a base enemy type. Includes properties like `id`, `name`, `hp`, `maxHp`, `energy`, `deck`, and `difficulty`.
-
-### Functions
-
-1.  **`generateEnemyForFloor(currentFloor)`**
-    *   **Purpose:** Selects an appropriate enemy template based on the `currentFloor` and its difficulty, scales its stats (like HP) based on the floor, potentially adds extra cards to its deck on higher floors, and initializes its battle state properties (hand, piles, block, status effects).
-    *   **Input:** `currentFloor` (Number) - The current floor number in the game.
-    *   **Output:** (Object) - A new enemy object, based on a template but scaled and initialized for the current battle.
-    *   **Side Effects:** Logs the generation process, including selected type, scaling, and final data.
-
-## `cards.js`
-
-Defines card templates, including their effects, and provides a way to retrieve them.
-
-### Variables
-
-1.  **`CARD_TEMPLATES`**
-    *   **Purpose:** An array of template objects, each defining a specific card. Includes properties like `id`, `name`, `type`, `cost`, `description`, `rarity`, an `effect` function, and potentially **`usesMomentum` (boolean) and `momentumCost` (number)**.
-    *   **`effect(game, source, target, spentMomentum)`:** A function within each card template that defines the card's logic when played. It receives the game instance (`game`), the entity playing the card (`source`), the target entity (`target`), and the **amount of momentum spent (`spentMomentum`)** by the game loop just before calling the effect (if the card is defined with `usesMomentum` and `momentumCost`). The function modifies the game state accordingly, potentially applying different or additional effects based on `spentMomentum`.
-
-### Functions
-
-1.  **`getCardTemplate(id)`**
-    *   **Purpose:** Retrieves a specific card template object from the `CARD_TEMPLATES` array based on its unique `id`.
-    *   **Input:** `id` (String) - The ID of the card template to find.
-    *   **Output:** (Object | undefined) - The found card template object, or `undefined` if no template with the given ID exists.
-    *   **Side Effects:** Logs an error if the template is not found. 
+    *   **Purpose:** An array of template objects, each defining a base enemy type. Includes properties like `id`, `name`, `hp`, `maxHp`, `
