@@ -10,8 +10,15 @@
 <body>
     <div id="game-container">
         <div class="header">
-            <h1>Card Battler</h1>
-            <p>A Roguelike Autobattler Card Game</p>
+            <!-- <h1>Card Battler</h1> -->
+            <!-- <p>A Roguelike Autobattler Card Game</p> -->
+        </div>
+
+        <!-- Moved Buttons Here -->
+        <div class="buttons">
+            <button id="start-battle-btn">Start Battle</button>
+            <button id="next-floor-btn" disabled>Next Floor</button>
+            <button id="view-deck-btn">View Deck</button>
         </div>
 
         <div class="floor-info" id="floor-info">Floor 1</div>
@@ -40,6 +47,9 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Turn Indicator Added Here -->
+            <div id="turn-indicator">Player's Turn</div>
 
             <!-- Log Area -->
             <div class="log-container" id="log-container">
@@ -80,15 +90,8 @@
             </div>
         </div>
 
-        <!-- Control Buttons -->
-        <div class="buttons">
-            <button id="start-battle-btn">Start Battle</button>
-            <button id="next-floor-btn" disabled>Next Floor</button>
-            <button id="view-deck-btn">View Deck</button>
-        </div>
-
         <!-- Reward Screen -->
-        <div class="reward-container" id="reward-container">
+        <div class="reward-container modal" id="reward-container">
             <h2>Choose Your Reward</h2>
             <p id="reward-picks-info">Picks remaining: X</p>
             <div class="reward-options" id="reward-options">
@@ -104,7 +107,7 @@
         </div>
 
         <!-- Deck View Screen -->
-        <div class="deck-builder" id="deck-builder">
+        <div class="deck-builder modal" id="deck-builder">
             <h2>Your Deck</h2>
             <div class="player-stats" id="player-stats">
                 <!-- Player stats will be added here -->
