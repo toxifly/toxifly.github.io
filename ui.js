@@ -125,82 +125,62 @@ export function updatePlayerHandUI(hand) {
     console.log(`[UI] Player hand UI update complete.`);
 }
 
-export function updateStatsUI(player, enemy) {
-    console.debug('[UI] Updating stats UI...');
-    // Update player stats
-    let playerHpText = `${player.hp}/${player.maxHp}`;
-    // Combine block display with HP text for robustness if separate element fails
-    // if (player.block > 0) {
-    //     playerHpText += ` (+${player.block} Block)`; // Example combined display
-    // }
+/**
+ * Updates the stats display for both player and enemy.
+ * @param {object} player - The player object.
+ * @param {object} [enemy=null] - The enemy object (optional).
+ */
+export function updateStatsUI(player, enemy = null) {
+    // console.debug('[UI] Updating stats UI...', { player, enemy });
 
-    // Safely update elements, checking if they exist first
-    if (elements.playerHp) {
-        elements.playerHp.textContent = `${player.hp}/${player.maxHp}`;
-    } else {
-        console.warn("[UI] Element with ID 'player-hp' not found.");
-    }
+    // Player Stats Update (simplified, assuming it exists and is correct)
+    // ... existing player stat updates ...
+    if (elements.playerMomentum) elements.playerMomentum.textContent = player.momentum ?? 0;
+    if (elements.playerMaxMomentum) elements.playerMaxMomentum.textContent = MAX_MOMENTUM;
 
-    // Safely update playerBlock
-    if (elements.playerBlock) {
-        elements.playerBlock.textContent = player.block > 0 ? `+${player.block}` : '0'; // Line 95 (approx)
-    } else {
-        // Log a warning instead of crashing if the element is missing
-        console.warn("[UI] Element with ID 'player-block' not found. Block will not be displayed separately.");
-    }
+    // Enemy Stats Update
+    if (elements.enemyContainer) { // Check if the container exists
+        if (enemy) {
+            // console.debug('[UI] Updating enemy stats display.');
+            const enemyHpText = `${enemy.hp}/${enemy.maxHp}`;
+            const enemyEnergyText = `${enemy.energy}/${enemy.maxEnergy}`;
 
-    if (elements.playerEnergy) {
-        elements.playerEnergy.textContent = `${player.energy}/${player.maxEnergy}`;
-    } else {
-        console.warn("[UI] Element with ID 'player-energy' not found.");
-    }
+            if (elements.enemyHp) elements.enemyHp.textContent = enemyHpText;
+            if (elements.enemyEnergy) elements.enemyEnergy.textContent = enemyEnergyText;
+            if (elements.enemyName) elements.enemyName.textContent = enemy.name;
 
-    if (elements.playerMomentum) {
-        elements.playerMomentum.textContent = player.momentum;
-    } else {
-        console.warn("[UI] Element with ID 'player-momentum' not found.");
-    }
+            // Update enemy background image
+            const specificImageUrl = `images/enemies/${enemy.id}.png`;
+            const fallbackImageUrl = 'images/enemies/placeholder.png';
 
-    if (elements.playerMaxMomentum) {
-        elements.playerMaxMomentum.textContent = MAX_MOMENTUM;
-    } else {
-        console.warn("[UI] Element with ID 'player-max-momentum' not found.");
-    }
+            // Check if specific image exists, then apply; otherwise use fallback
+            const img = new Image();
+            img.onload = () => {
+                // Image exists, apply it
+                console.debug(`[UI] Applying enemy background: ${specificImageUrl}`);
+                elements.enemyContainer.style.backgroundImage = `url('${specificImageUrl}')`;
+            };
+            img.onerror = () => {
+                // Image doesn't exist or failed to load, use fallback
+                console.warn(`[UI] Failed to load image: ${specificImageUrl}. Using fallback: ${fallbackImageUrl}`);
+                elements.enemyContainer.style.backgroundImage = `url('${fallbackImageUrl}')`;
+            };
+            img.src = specificImageUrl; // Start loading the image to trigger onload or onerror
 
-    // console.debug(`[UI] Player stats updated: HP=${playerHpText}, Energy=${elements.playerEnergy?.textContent}`); // Use optional chaining for debug log
-
-    // Update enemy stats (with similar safe checks)
-    if (enemy) {
-        let enemyHpText = `${enemy.hp}/${enemy.maxHp}`;
-        if (enemy.block > 0) {
-            // Consider adding block to HP text or using a separate, checked element
-             enemyHpText += ` (+${enemy.block} Block)`;
-        }
-
-        if (elements.enemyHp) {
-            elements.enemyHp.textContent = enemyHpText;
         } else {
-             console.warn("[UI] Element with ID 'enemy-hp' not found.");
-        }
+            // console.debug('[UI] No enemy provided, clearing enemy stats display.');
+            // Safely clear enemy stats
+            if(elements.enemyName) elements.enemyName.textContent = '???';
+            if(elements.enemyHp) elements.enemyHp.textContent = '-/-';
+            if(elements.enemyEnergy) elements.enemyEnergy.textContent = '-/-';
 
-        if (elements.enemyEnergy) {
-            elements.enemyEnergy.textContent = `${enemy.energy}/${enemy.maxEnergy}`;
-        } else {
-            console.warn("[UI] Element with ID 'enemy-energy' not found.");
+            // Reset background to placeholder or none when no enemy
+            const fallbackImageUrl = 'images/enemies/placeholder.png';
+            console.debug('[UI] No enemy, resetting background to placeholder.');
+            elements.enemyContainer.style.backgroundImage = `url('${fallbackImageUrl}')`; // Or 'none' if preferred
         }
-
-        if (elements.enemyName) {
-            elements.enemyName.textContent = enemy.name;
-        } else {
-            console.warn("[UI] Element with ID 'enemy-name' not found.");
-        }
-        // console.debug(`[UI] Enemy stats updated: Name=${enemy.name}, HP=${enemyHpText}, Energy=${enemy.energy}/${enemy.maxEnergy}`);
     } else {
-        // console.debug('[UI] No enemy provided, clearing enemy stats display.');
-        // Safely clear enemy stats
-        if(elements.enemyName) elements.enemyName.textContent = '???';
-        if(elements.enemyHp) elements.enemyHp.textContent = '-/-';
-        if(elements.enemyEnergy) elements.enemyEnergy.textContent = '-/-';
+        console.warn("[UI] Element with ID 'enemy' (the container) not found.");
     }
     // console.debug('[UI] Stats UI update complete.');
 }

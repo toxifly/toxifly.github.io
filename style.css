@@ -62,6 +62,29 @@ h2 {
 
 .character.enemy {
     border-color: #ff5555;
+    background-image: url('images/enemies/placeholder.png'); /* Default/Fallback */
+    background-size: cover; /* Scale the image to cover the container */
+    background-position: center; /* Center the image */
+    background-repeat: no-repeat; /* Do not repeat the image */
+    min-height: 150px; /* Ensure minimum height for visibility, adjust as needed */
+    position: relative; /* Needed for absolute positioning of children if any */
+    /* You might need to adjust padding/margins depending on content */
+    padding: 10px;
+    display: flex; /* Keep using flexbox for internal layout */
+    flex-direction: column;
+    align-items: center;
+}
+
+.character.enemy .character-name,
+.character.enemy .stats {
+    /* Add background/color to ensure readability over the background image */
+    background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin-top: 5px; /* Add some spacing */
+    z-index: 1; /* Ensure text is above the background */
+    width: fit-content; /* Adjust width */
 }
 
 .stats {
