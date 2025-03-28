@@ -291,26 +291,6 @@ export function animateCardPlay(cardId, cardTemplate, sourceIsPlayer) {
             console.log(`[UI] Removed temporary enemy card element for ${cardId}.`);
         }, animationDuration - 100); // Remove slightly before animation ends
     }
-
-    // Floating card name effect for both player and enemy
-    console.log(`[UI] Creating floating card name effect for ${cardTemplate.name}`);
-    const cardNameElem = document.createElement('div');
-    cardNameElem.textContent = cardTemplate.name;
-    cardNameElem.style.position = 'absolute';
-    cardNameElem.style.left = '50%'; // Center horizontally relative to viewport
-    cardNameElem.style.top = sourceIsPlayer ? '40%' : '35%'; // Adjusted enemy position slightly
-    cardNameElem.style.transform = 'translate(-50%, -50%)';
-    cardNameElem.style.fontSize = '24px';
-    cardNameElem.style.fontWeight = 'bold';
-    cardNameElem.style.color = getCardTypeColor(cardTemplate.type);
-    cardNameElem.style.textShadow = '2px 2px 0 #000';
-    cardNameElem.style.zIndex = '1000';
-    cardNameElem.style.animation = 'float-up 1.5s forwards'; // Keep this duration or adjust as needed
-    document.body.appendChild(cardNameElem);
-
-    setTimeout(() => {
-        cardNameElem.remove();
-    }, 1500); // Keep floating name duration, or match animationDuration if preferred
 }
 
 export function getCardTypeColor(type) {
