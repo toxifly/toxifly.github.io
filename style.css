@@ -9,7 +9,7 @@ body {
     align-items: center;
     min-height: 100vh;
     overflow-x: hidden; /* Prevent horizontal scroll from animations */
-    justify-content: center; /* Try centering the main container vertically */
+    justify-content: flex-start; /* Align content to the top */
 }
 
 #game-container {
