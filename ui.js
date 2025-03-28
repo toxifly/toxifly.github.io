@@ -262,16 +262,43 @@ export function showHealEffect(targetElement, amount) {
 
 export function animateCardPlay(cardId, cardTemplate, sourceIsPlayer) {
     console.log(`[UI] Animating card play for ${cardId} (${cardTemplate.name}). Source is player: ${sourceIsPlayer}`);
+    const animationDuration = 1800; // Match CSS animation duration (1.8s)
+
     if (sourceIsPlayer) {
-        // Find the card element and animate it
+        // Find the card element in the player's hand and animate it
         const cardElements = elements.playerHand.querySelectorAll('.card');
         cardElements.forEach(card => {
             if (card.dataset.cardId === cardId) {
                 card.classList.add('played');
-                setTimeout(() => card.remove(), 900); // Remove after animation
+                // Ensure the card isn't interactable during animation
+                card.style.pointerEvents = 'none';
+                card.style.zIndex = '1100'; // Bring player card slightly above floating name
+                setTimeout(() => card.remove(), animationDuration - 100); // Remove slightly before animation ends
                 console.log(`[UI] Found card element for ${cardId} in hand, applying 'played' class.`);
             }
         });
+    } else {
+        // Enemy played a card - create a temporary visual representation
+        console.log(`[UI] Creating temporary visual for enemy card ${cardId} (${cardTemplate.name})`);
+        const enemyCardElem = createCardElement(cardTemplate); // Use your card creation function
+        enemyCardElem.style.position = 'absolute';
+        enemyCardElem.style.top = '50%';
+        enemyCardElem.style.left = '50%';
+        enemyCardElem.style.transform = 'translate(-50%, -50%) scale(1.1)'; // Start slightly bigger and centered
+        enemyCardElem.style.zIndex = '1050'; // Above most things but below player's played card animation
+        enemyCardElem.style.pointerEvents = 'none'; // Not interactable
+        document.body.appendChild(enemyCardElem);
+
+        // Apply the played animation to the temporary enemy card visual
+        enemyCardElem.classList.add('played');
+        // Adjust animation slightly for enemy maybe? Or use same one. For now, using the same.
+        // Note: The @keyframes card-played is defined globally, so it applies here too.
+        console.log(`[UI] Applying 'played' class to temporary enemy card element.`);
+
+        setTimeout(() => {
+            enemyCardElem.remove();
+            console.log(`[UI] Removed temporary enemy card element for ${cardId}.`);
+        }, animationDuration - 100); // Remove slightly before animation ends
     }
 
     // Floating card name effect for both player and enemy
@@ -280,19 +307,19 @@ export function animateCardPlay(cardId, cardTemplate, sourceIsPlayer) {
     cardNameElem.textContent = cardTemplate.name;
     cardNameElem.style.position = 'absolute';
     cardNameElem.style.left = '50%'; // Center horizontally relative to viewport
-    cardNameElem.style.top = sourceIsPlayer ? '40%' : '30%'; // Position vertically
+    cardNameElem.style.top = sourceIsPlayer ? '40%' : '35%'; // Adjusted enemy position slightly
     cardNameElem.style.transform = 'translate(-50%, -50%)';
     cardNameElem.style.fontSize = '24px';
     cardNameElem.style.fontWeight = 'bold';
     cardNameElem.style.color = getCardTypeColor(cardTemplate.type);
     cardNameElem.style.textShadow = '2px 2px 0 #000';
     cardNameElem.style.zIndex = '1000';
-    cardNameElem.style.animation = 'float-up 1.5s forwards';
+    cardNameElem.style.animation = 'float-up 1.5s forwards'; // Keep this duration or adjust as needed
     document.body.appendChild(cardNameElem);
 
     setTimeout(() => {
         cardNameElem.remove();
-    }, 1500);
+    }, 1500); // Keep floating name duration, or match animationDuration if preferred
 }
 
 export function getCardTypeColor(type) {

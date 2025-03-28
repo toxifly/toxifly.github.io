@@ -19,7 +19,18 @@ import {
 } from './ui.js';
 import { getCardTemplate, CARD_TEMPLATES } from './cards.js';
 import { generateEnemyForFloor } from './enemies.js';
-import { MAX_MOMENTUM, MOMENTUM_GAIN_DEFAULT, MOMENTUM_GAIN_ZERO_COST } from './constants.js';
+import {
+    MAX_MOMENTUM,
+    MOMENTUM_GAIN_DEFAULT,
+    MOMENTUM_GAIN_ZERO_COST,
+    DELAY_TURN_START,
+    DELAY_PRE_ACTION,
+    DELAY_PRE_EFFECT,
+    DELAY_POST_EFFECT,
+    DELAY_TURN_END,
+    DELAY_MOMENTUM_BURST_PRE,
+    DELAY_MOMENTUM_BURST_POST
+} from './constants.js';
 
 const MAX_FLOOR = 10;
 const PLAYER_STARTING_DECK = ['strike', 'strike', 'strike', 'defend', 'defend', 'defend', 'iron_wave', 'quick_slash'];
@@ -188,7 +199,7 @@ class CardBattler {
         console.log('[Game] UI updated after drawing card(s).');
 
         console.log('[Game] Scheduling automated player turn action...');
-        setTimeout(() => this.playPlayerTurn(), 1000);
+        setTimeout(() => this.playPlayerTurn(), DELAY_TURN_START);
     }
 
     async playPlayerTurn() {
@@ -198,7 +209,7 @@ class CardBattler {
              return;
         }
 
-        await delay(500);
+        await delay(DELAY_PRE_ACTION);
 
         const playableCardIndex = this.player.hand.length > 0 ? 0 : -1;
         const cardId = playableCardIndex !== -1 ? this.player.hand[playableCardIndex] : null;
@@ -210,21 +221,29 @@ class CardBattler {
                 spentMomentum = cardTemplate.momentumCost;
                 this.player.momentum -= spentMomentum;
                 this.log(`Spent ${spentMomentum} momentum for ${cardTemplate.name}'s bonus effect.`, 'player');
+                 console.log(`[Game] Player spent ${spentMomentum} momentum. Remaining: ${this.player.momentum}`);
             }
 
             this.player.energy -= cardTemplate.cost;
 
             this.player.hand.splice(playableCardIndex, 1);
             this.player.discardPile.push(cardId);
+             console.log(`[Game] Card ${cardId} moved from hand to discard. Hand: ${this.player.hand.length}, Discard: ${this.player.discardPile.length}`);
 
             this.log(`Player plays ${cardTemplate.name} (Cost: ${cardTemplate.cost})`, 'player');
             this.updateStats();
 
             animateCardPlay(cardId, cardTemplate, true);
-            await delay(300);
+             console.log(`[Game] Card animation started for ${cardId}.`);
+
+            await delay(DELAY_PRE_EFFECT);
+             console.log(`[Game] Delay complete. Executing player card effect for ${cardId}...`);
 
             if (cardTemplate.effect) {
                 cardTemplate.effect(this, this.player, this.enemy, spentMomentum);
+                 console.log(`[Game] Card effect finished for ${cardId}.`);
+            } else {
+                 console.log(`[Game] Card ${cardId} has no effect function.`);
             }
 
             if (this.enemy.hp <= 0) {
@@ -240,34 +259,43 @@ class CardBattler {
             }
 
             if (momentumGained > 0) {
-                this.player.momentum += momentumGained;
+                this.player.momentum = Math.min(this.player.momentum + momentumGained, MAX_MOMENTUM);
                 this.log(`Gained ${momentumGained} momentum. (Total: ${this.player.momentum})`, 'player');
-                if (this.player.momentum > MAX_MOMENTUM) {
-                    this.player.momentum = MAX_MOMENTUM;
-                }
+                 console.log(`[Game] Player gained ${momentumGained} momentum. Total: ${this.player.momentum}`);
             }
+
+            await delay(DELAY_POST_EFFECT);
+             console.log('[Game] Post-effect delay complete.');
 
             console.log('[Game] Player played a card, drawing replacement...');
             this.drawCard();
 
             this.updateUI();
+             console.log('[Game] UI updated after card effect and drawing replacement.');
 
             if (this.player.momentum >= MAX_MOMENTUM) {
-                await delay(100);
+                 console.log('[Game] Max momentum reached. Preparing burst effect...');
+                await delay(DELAY_MOMENTUM_BURST_PRE);
                 showMomentumBurstEffect();
-                await delay(1000);
+                await delay(DELAY_MOMENTUM_BURST_POST);
                 this.log('Maximum momentum reached! Ending turn.', 'system-warning');
+                 console.log('[Game] Momentum burst finished. Ending turn.');
                 this.endPlayerTurn();
                 return;
             }
 
+             console.log('[Game] Scheduling next player action check...');
             this.playPlayerTurn();
+
         } else {
             if (this.player.hand.length > 0) {
                 this.log(`Player cannot afford ${cardTemplate.name} (Cost: ${cardTemplate.cost}, Energy: ${this.player.energy}).`, 'player');
+                 console.log(`[Game] Player cannot afford card ${cardId}. Cost: ${cardTemplate.cost}, Energy: ${this.player.energy}.`);
             } else {
                 this.log('Player has no card in hand.', 'player');
+                 console.log('[Game] Player hand is empty.');
             }
+             console.log('[Game] Player cannot play card. Ending turn.');
             this.endPlayerTurn();
         }
     }
@@ -285,7 +313,7 @@ class CardBattler {
         console.log('[Game] UI updated after discarding hand.');
 
         console.log('[Game] Scheduling enemy turn start...');
-        setTimeout(() => this.startEnemyTurn(), 1000);
+        setTimeout(() => this.startEnemyTurn(), DELAY_TURN_END);
     }
 
     startEnemyTurn() {
@@ -351,7 +379,7 @@ class CardBattler {
         console.log('[Game] Stats updated after enemy draw.');
 
         console.log('[Game] Scheduling enemy turn action...');
-        setTimeout(() => this.playEnemyTurn(), 1000);
+        setTimeout(() => this.playEnemyTurn(), DELAY_TURN_START);
     }
 
     async playEnemyTurn() {
@@ -361,7 +389,7 @@ class CardBattler {
              return;
         }
 
-        await delay(500);
+        await delay(DELAY_PRE_ACTION);
 
         const playableCardIndex = this.enemy.hand.findIndex(cardId => {
             const template = getCardTemplate(cardId);
@@ -385,28 +413,43 @@ class CardBattler {
                 this.updateStats();
                 console.log('[Game] Stats updated after enemy paying cost.');
 
-                await delay(300);
+                await delay(DELAY_PRE_EFFECT);
                 console.log('[Game] Delay complete. Executing enemy card effect...');
 
                 cardTemplate.effect(this, this.enemy, this.player);
                 console.log(`[Game] Card effect for ${cardId} finished.`);
                 this.enemy.discardPile.push(cardId);
                 console.log(`[Game] Card ${cardId} moved to enemy discard pile. Discard size: ${this.enemy.discardPile.length}`);
+
+                await delay(DELAY_POST_EFFECT);
+                 console.log('[Game] Post-effect delay complete.');
+
                 this.updateUI();
                 console.log('[Game] UI updated after enemy card effect.');
 
+                await delay(DELAY_POST_EFFECT);
+                 console.log('[Game] Post-effect delay complete.');
+
+                if (this.player.hp <= 0) {
+                    this.playerDefeated();
+                    return;
+                }
                 if (this.enemy.hp <= 0) {
                     this.enemyDefeated();
                     return;
                 }
 
-                this.playEnemyTurn();
+                 console.log('[Game] Scheduling next enemy action check...');
+                 this.playEnemyTurn();
+
             } else {
                 this.log(`Error: Card template not found for ID: ${cardId}`, 'error');
+                 console.error(`[Game] Card template not found for ID: ${cardId}. Ending turn.`);
                 this.endEnemyTurn();
             }
         } else {
             this.log('Enemy has no more playable cards.', 'enemy');
+             console.log('[Game] Enemy has no more playable cards. Ending turn.');
             this.endEnemyTurn();
         }
     }
@@ -424,7 +467,7 @@ class CardBattler {
         console.log('[Game] Stats updated after enemy turn end.');
 
         console.log('[Game] Scheduling player turn start...');
-        setTimeout(() => this.startPlayerTurn(), 1000);
+        setTimeout(() => this.startPlayerTurn(), DELAY_TURN_END);
     }
 
     drawCard() {
@@ -707,6 +750,11 @@ class CardBattler {
 
     log(message, type = 'system') {
         logMessage(message, type);
+    }
+
+    playerDefeated() {
+        console.log('[Game] Player has been defeated.');
+        this.gameOver(false);
     }
 }
 
