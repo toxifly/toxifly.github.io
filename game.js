@@ -719,11 +719,17 @@ class CardBattler {
         this.currentFloor++;
         updateFloorInfoUI(this.currentFloor);
 
-        console.log('[Game] Healing player slightly between floors.');
-        const healAmount = Math.min(5, Math.floor(this.player.maxHp * 0.1));
-        this.player.hp += healAmount;
-        showHealEffect(elements.player, healAmount);
-        this.log(`Rested slightly, healed ${healAmount} HP.`, 'system');
+        console.log('[Game] Healing player between floors.');
+        const hpBeforeHeal = this.player.hp;
+        const amountHealed = this.player.maxHp - hpBeforeHeal;
+        if (amountHealed > 0) {
+            this.player.hp = this.player.maxHp;
+            showHealEffect(elements.player, amountHealed);
+            this.log(`Rested and fully restored HP! (+${amountHealed} HP)`, 'system');
+            console.log(`[Game] Player healed to full HP (${this.player.maxHp}). Healed for ${amountHealed}.`);
+        } else {
+            console.log('[Game] Player already at full HP.');
+        }
 
         console.log('[Game] Generating enemy for the new floor.');
         this.enemy = generateEnemyForFloor(this.currentFloor);
