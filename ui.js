@@ -1,17 +1,22 @@
-import { CARD_TYPES } from './constants.js';
+import { CARD_TYPES, MAX_MOMENTUM } from './constants.js';
 import { getCardTemplate } from './cards.js';
 
 export const elements = {
     playerName: document.getElementById('player-name'),
     playerHp: document.getElementById('player-hp'),
+    playerMaxHp: document.getElementById('player-max-hp'),
+    playerBlock: document.getElementById('player-block'),
     playerEnergy: document.getElementById('player-energy'),
+    playerMaxEnergy: document.getElementById('player-max-energy'),
+    playerMomentum: document.getElementById('player-momentum'),
+    playerMaxMomentum: document.getElementById('player-max-momentum'),
     playerHand: document.getElementById('player-hand'),
     player: document.getElementById('player'),
 
     enemyName: document.getElementById('enemy-name'),
     enemyHp: document.getElementById('enemy-hp'),
     enemyEnergy: document.getElementById('enemy-energy'),
-    enemy: document.getElementById('enemy'),
+    enemyContainer: document.getElementById('enemy'),
 
     logContainer: document.getElementById('log-container'),
     floorInfo: document.getElementById('floor-info'),
@@ -34,36 +39,74 @@ export const elements = {
     backToGameBtn: document.getElementById('back-to-game-btn'),
 };
 
-export function createCardElement(cardTemplate) {
-    console.log(`[UI] Creating card element for: ${cardTemplate.id} (${cardTemplate.name})`);
-    const card = document.createElement('div');
-    card.className = `card ${cardTemplate.type}`;
-    card.dataset.cardId = cardTemplate.id;
+/**
+ * Creates a DOM element for a card.
+ * @param {object} cardTemplate - The card template object.
+ * @returns {HTMLElement} The card element.
+ */
+function createCardElement(cardTemplate) {
+    console.log(`Creating element for card: ${cardTemplate.name}`);
+    const cardElement = document.createElement('div');
+    cardElement.classList.add('card');
+    cardElement.dataset.cardId = cardTemplate.id; // Use data attribute for ID
 
-    const cost = document.createElement('div');
-    cost.className = 'card-cost';
-    cost.textContent = cardTemplate.cost;
+    // Card Background Image
+    // Note: Add CSS: .card-background-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+    // Note: Add CSS: .card { position: relative; overflow: hidden; /* keep existing dimensions/border */ }
+    const imgElement = document.createElement('img');
+    // imgElement.classList.add('card-image'); // Remove or rename if it conflicts
+    imgElement.classList.add('card-background-image'); // New class for background styling
+    const specificImagePath = `images/cards/${cardTemplate.id}.png`;
+    const placeholderImagePath = 'images/cards/placeholder.png';
+    imgElement.src = specificImagePath;
+    imgElement.alt = ""; // Decorative images should have empty alt text
+    // Fallback to placeholder if specific image fails to load
+    imgElement.onerror = () => {
+        console.warn(`Specific image not found for ${cardTemplate.id}, using placeholder.`);
+        imgElement.src = placeholderImagePath;
+        imgElement.onerror = null; // Prevent infinite loops if placeholder also fails
+    };
+    cardElement.appendChild(imgElement); // Append image first
 
-    const name = document.createElement('div');
-    name.className = 'card-name';
-    name.textContent = cardTemplate.name;
+    // Container for overlay content (Name, Cost, Description)
+    // Note: Add CSS: .card-content { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; padding: 8px; box-sizing: border-box; color: white; text-shadow: 1px 1px 2px black; /* Adjust color/shadow for readability */ }
+    const contentElement = document.createElement('div');
+    contentElement.classList.add('card-content');
+    cardElement.appendChild(contentElement);
 
-    const description = document.createElement('div');
-    description.className = 'card-description';
-    description.textContent = cardTemplate.description;
+    // Card Name (Top)
+    // Note: Add CSS: .card-name { text-align: center; font-weight: bold; font-size: 1.1em; /* Adjust styling */ }
+    const nameElement = document.createElement('div');
+    nameElement.classList.add('card-name');
+    nameElement.textContent = cardTemplate.name;
+    contentElement.appendChild(nameElement); // Add to content container
 
-    const type = document.createElement('div');
-    type.className = 'card-type';
-    type.textContent = cardTemplate.type.charAt(0).toUpperCase() + cardTemplate.type.slice(1);
+    // Card Cost (e.g., Top Right)
+    // Note: Add CSS: .card-cost { position: absolute; top: 5px; right: 8px; /* Style cost indicator */ background: rgba(0,0,0,0.7); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9em; color: yellow; /* Adjust styling */ }
+    const costElement = document.createElement('div');
+    costElement.classList.add('card-cost');
+    costElement.textContent = cardTemplate.cost;
+    contentElement.appendChild(costElement); // Add to content container (CSS positions it)
 
-    card.appendChild(cost);
-    card.appendChild(name);
-    card.appendChild(description);
-    card.appendChild(type);
+    // Card Description (Bottom)
+    // Note: Add CSS: .card-description { margin-top: auto; /* Pushes to bottom */ text-align: center; font-size: 0.9em; /* Adjust styling */ padding: 5px; background: rgba(0,0,0,0.4); border-radius: 4px; /* Optional background for readability */ }
+    const descriptionElement = document.createElement('div');
+    descriptionElement.classList.add('card-description');
+    descriptionElement.textContent = cardTemplate.description;
+    contentElement.appendChild(descriptionElement); // Add to content container
 
-    return card;
+    // Card Type Indicator (Border color - keep as is)
+    const typeColor = getCardTypeColor(cardTemplate.type);
+    cardElement.style.borderColor = typeColor;
+    // Note: Ensure card border style is set in CSS, e.g., .card { border: 3px solid; }
+
+    return cardElement;
 }
 
+/**
+ * Updates the player's hand UI.
+ * @param {string[]} hand - Array of card IDs in the player's hand.
+ */
 export function updatePlayerHandUI(hand) {
     console.log(`[UI] Updating player hand UI with ${hand.length} cards.`);
     elements.playerHand.innerHTML = '';
@@ -83,30 +126,80 @@ export function updateStatsUI(player, enemy) {
     console.debug('[UI] Updating stats UI...');
     // Update player stats
     let playerHpText = `${player.hp}/${player.maxHp}`;
-    if (player.block > 0) {
-        playerHpText += ` (${player.block} Block)`;
-    }
-    elements.playerHp.textContent = playerHpText;
-    elements.playerEnergy.textContent = `${player.energy}/${player.maxEnergy}`;
-    console.debug(`[UI] Player stats updated: HP=${playerHpText}, Energy=${player.energy}/${player.maxEnergy}`);
+    // Combine block display with HP text for robustness if separate element fails
+    // if (player.block > 0) {
+    //     playerHpText += ` (+${player.block} Block)`; // Example combined display
+    // }
 
-    // Update enemy stats
+    // Safely update elements, checking if they exist first
+    if (elements.playerHp) {
+        elements.playerHp.textContent = `${player.hp}/${player.maxHp}`;
+    } else {
+        console.warn("[UI] Element with ID 'player-hp' not found.");
+    }
+
+    // Safely update playerBlock
+    if (elements.playerBlock) {
+        elements.playerBlock.textContent = player.block > 0 ? `+${player.block}` : '0'; // Line 95 (approx)
+    } else {
+        // Log a warning instead of crashing if the element is missing
+        console.warn("[UI] Element with ID 'player-block' not found. Block will not be displayed separately.");
+    }
+
+    if (elements.playerEnergy) {
+        elements.playerEnergy.textContent = `${player.energy}/${player.maxEnergy}`;
+    } else {
+        console.warn("[UI] Element with ID 'player-energy' not found.");
+    }
+
+    if (elements.playerMomentum) {
+        elements.playerMomentum.textContent = player.momentum;
+    } else {
+        console.warn("[UI] Element with ID 'player-momentum' not found.");
+    }
+
+    if (elements.playerMaxMomentum) {
+        elements.playerMaxMomentum.textContent = MAX_MOMENTUM;
+    } else {
+        console.warn("[UI] Element with ID 'player-max-momentum' not found.");
+    }
+
+    // console.debug(`[UI] Player stats updated: HP=${playerHpText}, Energy=${elements.playerEnergy?.textContent}`); // Use optional chaining for debug log
+
+    // Update enemy stats (with similar safe checks)
     if (enemy) {
         let enemyHpText = `${enemy.hp}/${enemy.maxHp}`;
         if (enemy.block > 0) {
-            enemyHpText += ` (${enemy.block} Block)`;
+            // Consider adding block to HP text or using a separate, checked element
+             enemyHpText += ` (+${enemy.block} Block)`;
         }
-        elements.enemyHp.textContent = enemyHpText;
-        elements.enemyEnergy.textContent = `${enemy.energy}/${enemy.maxEnergy}`;
-        elements.enemyName.textContent = enemy.name;
-        console.debug(`[UI] Enemy stats updated: Name=${enemy.name}, HP=${enemyHpText}, Energy=${enemy.energy}/${enemy.maxEnergy}`);
+
+        if (elements.enemyHp) {
+            elements.enemyHp.textContent = enemyHpText;
+        } else {
+             console.warn("[UI] Element with ID 'enemy-hp' not found.");
+        }
+
+        if (elements.enemyEnergy) {
+            elements.enemyEnergy.textContent = `${enemy.energy}/${enemy.maxEnergy}`;
+        } else {
+            console.warn("[UI] Element with ID 'enemy-energy' not found.");
+        }
+
+        if (elements.enemyName) {
+            elements.enemyName.textContent = enemy.name;
+        } else {
+            console.warn("[UI] Element with ID 'enemy-name' not found.");
+        }
+        // console.debug(`[UI] Enemy stats updated: Name=${enemy.name}, HP=${enemyHpText}, Energy=${enemy.energy}/${enemy.maxEnergy}`);
     } else {
-        console.debug('[UI] No enemy provided, clearing enemy stats display.');
-        elements.enemyName.textContent = '???';
-        elements.enemyHp.textContent = '-/-';
-        elements.enemyEnergy.textContent = '-/-';
+        // console.debug('[UI] No enemy provided, clearing enemy stats display.');
+        // Safely clear enemy stats
+        if(elements.enemyName) elements.enemyName.textContent = '???';
+        if(elements.enemyHp) elements.enemyHp.textContent = '-/-';
+        if(elements.enemyEnergy) elements.enemyEnergy.textContent = '-/-';
     }
-    console.debug('[UI] Stats UI update complete.');
+    // console.debug('[UI] Stats UI update complete.');
 }
 
 export function updateFloorInfoUI(floor) {
@@ -129,23 +222,24 @@ export function clearLog() {
     elements.logContainer.innerHTML = '';
 }
 
-export function showDamageEffect(targetElement, damage) {
-    console.log(`[UI] Showing damage effect (${damage}) on element:`, targetElement);
-    targetElement.classList.add('shake');
-    setTimeout(() => targetElement.classList.remove('shake'), 500);
-
+export function showDamageEffect(element, amount) {
+    console.log(`[UI] Showing damage effect (${amount}) on element:`, element);
+    if (!element) {
+        console.warn("[UI] showDamageEffect called with an undefined element.");
+        return;
+    }
+    element.classList.add('damaged');
     const damageText = document.createElement('div');
-    damageText.className = 'damage-text';
-    damageText.textContent = `-${damage}`;
-    const rect = targetElement.getBoundingClientRect();
+    damageText.classList.add('damage-text');
+    damageText.textContent = `-${amount}`;
+    const rect = element.getBoundingClientRect();
     damageText.style.left = `${rect.left + rect.width / 2 + (Math.random() - 0.5) * 50}px`;
     damageText.style.top = `${rect.top + rect.height / 2 + (Math.random() - 0.5) * 30}px`;
     document.body.appendChild(damageText);
 
     // Simple hit flash effect (can be expanded)
-    targetElement.classList.add('flash');
-    setTimeout(() => targetElement.classList.remove('flash'), 300);
-
+    element.classList.add('flash');
+    setTimeout(() => element.classList.remove('flash'), 300);
 
     setTimeout(() => damageText.remove(), 1500);
 }
@@ -290,6 +384,7 @@ export function updateDeckViewUI(player) {
             <div>Strength</div>
             <div class="stat-value">${player.strength || 0}</div>
         </div>
+        <div>Block: <span id="player-block">${player.block || 0}</span></div>
         <!-- Add more stats as needed -->
     `;
     elements.playerStats.innerHTML = statsHTML;
@@ -364,4 +459,40 @@ export function updateDeckViewUI(player) {
         elements.deckGrid.appendChild(cardElement);
     });
     console.log('[UI] Deck View UI update complete.');
+}
+
+export function showMomentumBurstEffect() {
+    console.log('Showing Momentum Burst Effect');
+    const effectElement = document.createElement('div');
+    effectElement.style.position = 'fixed';
+    effectElement.style.top = '50%';
+    effectElement.style.left = '50%';
+    effectElement.style.transform = 'translate(-50%, -50%)';
+    effectElement.style.zIndex = '1000'; // Ensure it's on top
+    effectElement.style.opacity = '0';
+    effectElement.style.transition = 'opacity 0.5s ease-out';
+
+    const img = document.createElement('img');
+    img.src = '/images/momentum-burst.png'; // Use the specified image path
+    img.alt = 'Momentum Burst!';
+    img.style.maxWidth = '80vw'; // Adjust size as needed
+    img.style.maxHeight = '80vh';
+
+    effectElement.appendChild(img);
+    document.body.appendChild(effectElement);
+
+    // Fade in
+    requestAnimationFrame(() => {
+        effectElement.style.opacity = '1';
+    });
+
+    // Fade out and remove after a delay
+    setTimeout(() => {
+        effectElement.style.opacity = '0';
+        setTimeout(() => {
+            if (effectElement.parentNode) {
+                effectElement.parentNode.removeChild(effectElement);
+            }
+        }, 500); // Match transition duration
+    }, 1000); // Duration the effect stays visible
 } 

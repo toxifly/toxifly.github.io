@@ -1,14 +1,32 @@
-import { CARD_TYPES } from './constants.js';
-import { CARD_TEMPLATES, getCardTemplate } from './cards.js';
-import { ENEMIES, generateEnemyForFloor } from './enemies.js';
-import * as Utils from './utils.js';
-import * as UI from './ui.js';
+import { shuffleArray, delay } from './utils.js';
+import {
+    elements,
+    updatePlayerHandUI,
+    updateStatsUI,
+    updateFloorInfoUI,
+    logMessage,
+    clearLog,
+    showDamageEffect,
+    showHealEffect,
+    animateCardPlay,
+    showMomentumBurstEffect,
+    showRewardUI,
+    showGameOverUI,
+    hideGameOverUI,
+    showDeckUI,
+    hideDeckUI
+} from './ui.js';
+import { getCardTemplate, CARD_TEMPLATES } from './cards.js';
+import { generateEnemyForFloor } from './enemies.js';
+import { MAX_MOMENTUM, MOMENTUM_GAIN_DEFAULT, MOMENTUM_GAIN_ZERO_COST } from './constants.js';
 
 const MAX_FLOOR = 10;
 const PLAYER_STARTING_DECK = ['strike', 'strike', 'strike', 'defend', 'defend', 'defend', 'iron_wave', 'quick_slash'];
 const PLAYER_STARTING_HP = 50;
 const PLAYER_STARTING_ENERGY = 3;
 const HAND_SIZE = 5;
+const MAX_HAND_SIZE = 10;
+const BASE_DRAW = 5;
 
 class CardBattler {
     constructor() {
@@ -21,11 +39,11 @@ class CardBattler {
 
         // Bind event listeners from UI elements
         console.log('[Game] Binding UI event listeners...');
-        UI.elements.startBattleBtn.addEventListener('click', () => this.startBattle());
-        UI.elements.nextFloorBtn.addEventListener('click', () => this.nextFloor());
-        UI.elements.viewDeckBtn.addEventListener('click', () => this.viewDeck());
-        UI.elements.restartBtn.addEventListener('click', () => this.restart());
-        UI.elements.backToGameBtn.addEventListener('click', () => this.hideViewDeck());
+        elements.startBattleBtn.addEventListener('click', () => this.startBattle());
+        elements.nextFloorBtn.addEventListener('click', () => this.nextFloor());
+        elements.viewDeckBtn.addEventListener('click', () => this.viewDeck());
+        elements.restartBtn.addEventListener('click', () => this.restart());
+        elements.backToGameBtn.addEventListener('click', () => this.hideViewDeck());
 
         // Initialize game
         this.setUpNewGame();
@@ -43,37 +61,38 @@ class CardBattler {
             maxEnergy: PLAYER_STARTING_ENERGY,
             block: 0,
             strength: 0,
-            vulnerable: 0, // Add vulnerable status
-            berserk: 0,    // Add berserk status
+            vulnerable: 0,
+            berserk: 0,
             deck: [...PLAYER_STARTING_DECK],
             hand: [],
             drawPile: [],
-            discardPile: []
+            discardPile: [],
+            statusEffects: {},
+            momentum: 0,
         };
-        console.log('[Game] Player initialized:', JSON.parse(JSON.stringify(this.player))); // Deep copy for logging
+        console.log('[Game] Player initialized:', JSON.parse(JSON.stringify(this.player)));
 
-        UI.updateFloorInfoUI(this.currentFloor);
-        this.generateEnemy(); // Includes logging
-        UI.clearLog(); // UI log, not console
-        this.log('Welcome to Card Battler! Prepare for battle...', 'system'); // Game log
+        updateFloorInfoUI(this.currentFloor);
+        this.generateEnemy();
+        clearLog();
+        this.log('Welcome to Card Battler! Prepare for battle...', 'system');
 
         console.log('[Game] Enabling initial buttons.');
-        UI.elements.startBattleBtn.disabled = false;
-        UI.elements.nextFloorBtn.disabled = true;
-        UI.elements.rewardContainer.style.display = 'none';
-        UI.hideGameOverUI();
-        UI.hideDeckUI();
-        this.updateStats(); // Initial UI update
+        elements.startBattleBtn.disabled = false;
+        elements.nextFloorBtn.disabled = true;
+        if (elements.rewardContainer) elements.rewardContainer.style.display = 'none';
+        hideGameOverUI();
+        hideDeckUI();
+        this.updateStats();
         console.log('[Game] New game setup complete.');
     }
 
     generateEnemy() {
         console.log(`[Game] Generating enemy for floor ${this.currentFloor}...`);
-        this.enemy = generateEnemyForFloor(this.currentFloor); // generateEnemyForFloor logs details
+        this.enemy = generateEnemyForFloor(this.currentFloor);
         console.log('[Game] Enemy generated:', JSON.parse(JSON.stringify(this.enemy)));
-        // Update enemy name immediately in UI
-        UI.elements.enemyName.textContent = this.enemy.name;
-        this.updateStats(); // Update stats display
+        if (elements.enemyName) elements.enemyName.textContent = this.enemy.name;
+        this.updateStats();
     }
 
     startBattle() {
@@ -88,31 +107,29 @@ class CardBattler {
         this.battleTurn = 0;
         console.log(`[Game] Battle state set: inBattle=true, battleTurn=0`);
 
-        // Reset player state for battle
-        console.log('[Game] Resetting player state for battle...');
         this.player.hand = [];
-        this.player.drawPile = Utils.shuffleArray([...this.player.deck]);
+        this.player.drawPile = shuffleArray([...this.player.deck]);
         this.player.discardPile = [];
         this.player.block = 0;
         this.player.energy = this.player.maxEnergy;
-        this.player.vulnerable = 0; // Reset vulnerable at start of battle
+        this.player.vulnerable = 0;
+        this.player.statusEffects = {};
+        this.player.momentum = 0;
         console.log(`[Game] Player state reset. Draw pile size: ${this.player.drawPile.length}`);
 
-        // Reset enemy state for battle
-        console.log('[Game] Resetting enemy state for battle...');
         this.enemy.hand = [];
-        this.enemy.drawPile = Utils.shuffleArray([...this.enemy.deck]);
+        this.enemy.drawPile = shuffleArray([...this.enemy.deck]);
         this.enemy.discardPile = [];
         this.enemy.block = 0;
         this.enemy.energy = this.enemy.maxEnergy;
-        this.enemy.vulnerable = 0; // Reset vulnerable at start of battle
+        this.enemy.vulnerable = 0;
         console.log(`[Game] Enemy state reset. Draw pile size: ${this.enemy.drawPile.length}`);
 
         this.log(`Battle against ${this.enemy.name} begins!`, 'system');
         console.log(`[Game] Disabling buttons for battle start.`);
-        UI.elements.startBattleBtn.disabled = true;
-        UI.elements.nextFloorBtn.disabled = true; // Disable during battle
-        UI.elements.viewDeckBtn.disabled = true; // Disable during battle
+        elements.startBattleBtn.disabled = true;
+        elements.nextFloorBtn.disabled = true;
+        elements.viewDeckBtn.disabled = true;
 
         this.startPlayerTurn();
     }
@@ -121,60 +138,53 @@ class CardBattler {
         console.log('[Game] Checking battle state before starting player turn...');
         if (!this.inBattle) {
             console.warn('[Game] startPlayerTurn called but not in battle. Aborting.');
-            return; // Stop if battle ended abruptly
+            return;
         }
 
         this.battleTurn++;
         console.log(`[Game] Starting Player Turn ${this.battleTurn}`);
-        this.log(`--- Turn ${this.battleTurn} ---`, 'system'); // Game log
+        this.log(`--- Player Turn ${this.battleTurn} ---`, 'system');
 
-        // Start of turn effects
-        console.log(`[Game] Player block reset from ${this.player.block} to 0.`);
-        this.player.block = 0; // Block resets
-        console.log(`[Game] Player energy reset to ${this.player.maxEnergy}.`);
-        this.player.energy = this.player.maxEnergy; // Reset energy
+        this.player.block = 0;
+        this.player.energy = this.player.maxEnergy;
+        this.player.momentum = 0;
 
-        // Apply Berserk effect
         if (this.player.berserk > 0) {
             console.log(`[Game] Applying player Berserk effect (${this.player.berserk})...`);
             this.player.energy += this.player.berserk;
-            this.log(`${this.player.name} gains ${this.player.berserk} energy from Berserk.`, 'player'); // Game log
+            this.log(`${this.player.name} gains ${this.player.berserk} energy from Berserk.`, 'player');
             console.log(`[Game] Player energy increased to ${this.player.energy} by Berserk.`);
 
-            // Deal damage from Berserk (use dealDamage for consistency, ignore block)
             const berserkDamage = this.player.berserk * 2;
-            this.log(`${this.player.name} takes ${berserkDamage} damage from Berserk.`, 'player'); // Game log
+            this.log(`${this.player.name} takes ${berserkDamage} damage from Berserk.`, 'player');
             console.log(`[Game] Player taking ${berserkDamage} self-damage from Berserk.`);
-            const playerDied = this.dealDamage(this.player, this.player, berserkDamage, true); // Source is self, ignore block
+            const playerDied = this.dealDamage(this.player, this.player, berserkDamage, true);
             if (playerDied) {
                 console.log('[Game] Player died from Berserk damage. Turn ended.');
-                return; // Game over handles the rest
+                return;
             }
         }
 
-        // Reduce Vulnerable duration
         if (this.player.vulnerable > 0) {
              console.log(`[Game] Reducing player Vulnerable duration from ${this.player.vulnerable}.`);
              this.player.vulnerable--;
              if (this.player.vulnerable === 0) {
-                this.log(`${this.player.name} is no longer Vulnerable.`, 'player'); // Game log
+                this.log(`${this.player.name} is no longer Vulnerable.`, 'player');
                 console.log(`[Game] Player is no longer Vulnerable.`);
              } else {
                  console.log(`[Game] Player Vulnerable duration now ${this.player.vulnerable}.`);
              }
         }
 
-        // Draw cards
         console.log(`[Game] Player drawing up to ${HAND_SIZE} cards.`);
         for (let i = 0; i < HAND_SIZE; i++) {
-            this.drawCard(); // drawCard has its own logging
+            this.drawCard();
         }
         console.log(`[Game] Player finished drawing. Hand size: ${this.player.hand.length}`);
 
-        this.updateUI(); // Update UI after drawing
+        this.updateUI();
         console.log('[Game] UI updated after drawing cards.');
 
-        // Start automated player actions after a delay
         console.log('[Game] Scheduling automated player turn action...');
         setTimeout(() => this.playPlayerTurn(), 1000);
     }
@@ -183,76 +193,88 @@ class CardBattler {
         console.log('[Game] Executing automated player turn action...');
         if (!this.inBattle) {
              console.warn('[Game] playPlayerTurn called but not in battle. Aborting.');
-             return; // Stop if battle ended
+             return;
         }
 
-        // Simple AI: find the first playable card
-        let cardToPlay = null;
-        let cardIndex = -1;
+        await delay(500);
 
-        console.log('[Game] Player AI searching for a playable card...');
-        for (let i = 0; i < this.player.hand.length; i++) {
-            const cardId = this.player.hand[i];
+        const playableCardIndex = this.player.hand.findIndex(cardId => {
             const template = getCardTemplate(cardId);
-            console.log(`[Game] AI checking card: ${cardId} (Cost: ${template.cost}, Player Energy: ${this.player.energy})`);
-            if (template.cost <= this.player.energy) {
-                cardToPlay = cardId;
-                cardIndex = i;
-                console.log(`[Game] AI found playable card: ${cardToPlay} at index ${cardIndex}.`);
-                break; // Play the first one found
+            return template && this.player.energy >= template.cost;
+        });
+
+        if (playableCardIndex !== -1) {
+            const cardId = this.player.hand[playableCardIndex];
+            const cardTemplate = getCardTemplate(cardId);
+
+            if (cardTemplate) {
+                let spentMomentum = 0;
+                if (cardTemplate.usesMomentum && this.player.momentum >= cardTemplate.momentumCost) {
+                    spentMomentum = cardTemplate.momentumCost;
+                    this.player.momentum -= spentMomentum;
+                    this.log(`Spent ${spentMomentum} momentum for ${cardTemplate.name}'s bonus effect.`, 'player');
+                }
+
+                this.player.energy -= cardTemplate.cost;
+
+                this.player.hand.splice(playableCardIndex, 1);
+                this.player.discardPile.push(cardId);
+
+                this.log(`Player plays ${cardTemplate.name} (Cost: ${cardTemplate.cost})`, 'player');
+                this.updateStats();
+
+                animateCardPlay(cardId, cardTemplate, true);
+                await delay(300);
+
+                if (cardTemplate.effect) {
+                    cardTemplate.effect(this, this.player, this.enemy, spentMomentum);
+                }
+
+                if (this.enemy.hp <= 0) {
+                    this.enemyDefeated();
+                    return;
+                }
+
+                let momentumGained = 0;
+                if (cardTemplate.cost === 0) {
+                    momentumGained = MOMENTUM_GAIN_ZERO_COST;
+                } else if (cardTemplate.cost === 1 || cardTemplate.cost === 2) {
+                    momentumGained = MOMENTUM_GAIN_DEFAULT;
+                }
+
+                if (momentumGained > 0) {
+                    this.player.momentum += momentumGained;
+                    this.log(`Gained ${momentumGained} momentum. (Total: ${this.player.momentum})`, 'player');
+                }
+
+                if (this.player.momentum >= MAX_MOMENTUM) {
+                    this.player.momentum = MAX_MOMENTUM;
+                    this.updateUI();
+                    await delay(100);
+                    showMomentumBurstEffect();
+                    await delay(1000);
+                    this.log('Maximum momentum reached! Ending turn.', 'system-warning');
+                    this.endPlayerTurn();
+                    return;
+                }
+
+                this.updateUI();
+
+                this.playPlayerTurn();
+            } else {
+                this.log(`Error: Card template not found for ID: ${cardId}`, 'error');
+                this.endPlayerTurn();
             }
-        }
-
-        if (cardToPlay) {
-             console.log(`[Game] Player playing card: ${cardToPlay}`);
-             // Remove card from hand *before* playing effect
-            this.player.hand.splice(cardIndex, 1);
-            console.log(`[Game] Card ${cardToPlay} removed from hand. Hand size: ${this.player.hand.length}`);
-
-            const template = getCardTemplate(cardToPlay);
-            console.log(`[Game] Paying energy cost: ${template.cost}. Current energy: ${this.player.energy}`);
-            this.player.energy -= template.cost;
-            console.log(`[Game] Player energy after cost: ${this.player.energy}`);
-
-            this.log(`${this.player.name} plays ${template.name}.`, 'player'); // Game log
-            UI.animateCardPlay(cardToPlay, template, true); // UI logs animation start
-            this.updateUI(); // Update UI immediately after cost/hand change
-            console.log('[Game] UI updated after paying cost.');
-
-            // Wait for card animation before effect
-            console.log('[Game] Waiting for card play animation...');
-            await Utils.delay(300);
-            console.log('[Game] Animation delay complete. Executing card effect...');
-
-            template.effect(this, this.player, this.enemy); // Card effect should log its actions
-            console.log(`[Game] Card effect for ${cardToPlay} finished.`);
-            this.player.discardPile.push(cardToPlay); // Move to discard after effect
-            console.log(`[Game] Card ${cardToPlay} moved to discard pile. Discard size: ${this.player.discardPile.length}`);
-            this.updateUI(); // Update after effect resolution
-            console.log('[Game] UI updated after card effect.');
-
-            // Check if game ended
-            if (!this.inBattle) {
-                 console.log('[Game] Battle ended during card effect. Stopping player turn.');
-                 return; // Stop if battle ended during card effect
-            }
-
-            // Continue playing if possible after a delay
-            console.log('[Game] Scheduling next player action...');
-            setTimeout(() => this.playPlayerTurn(), 800);
-
         } else {
-            // No playable cards, end turn
-            console.log('[Game] Player AI found no playable cards. Ending turn.');
+            this.log('Player has no more playable cards.', 'player');
             this.endPlayerTurn();
         }
     }
 
     endPlayerTurn() {
         console.log('[Game] Ending player turn...');
-        this.log(`${this.player.name} ends their turn.`, 'player'); // Game log
+        this.log(`${this.player.name} ends their turn.`, 'player');
 
-        // Discard hand
         console.log(`[Game] Discarding player hand. Hand size: ${this.player.hand.length}`);
         this.player.discardPile.push(...this.player.hand);
         this.player.hand = [];
@@ -261,74 +283,65 @@ class CardBattler {
         this.updateUI();
         console.log('[Game] UI updated after discarding hand.');
 
-        // Start enemy turn after a delay
         console.log('[Game] Scheduling enemy turn start...');
         setTimeout(() => this.startEnemyTurn(), 1000);
     }
 
-
-     startEnemyTurn() {
+    startEnemyTurn() {
         console.log('[Game] Checking battle state before starting enemy turn...');
         if (!this.inBattle) {
             console.warn('[Game] startEnemyTurn called but not in battle. Aborting.');
-            return; // Stop if battle ended
+            return;
         }
 
         console.log(`[Game] Starting Enemy Turn ${this.battleTurn}`);
-        this.log(`${this.enemy.name}'s turn.`, 'enemy'); // Game log
+        this.log(`${this.enemy.name}'s turn.`, 'enemy');
 
-        // Start of turn effects
-        console.log(`[Game] Enemy block reset from ${this.enemy.block} to 0.`);
         this.enemy.block = 0;
-        console.log(`[Game] Enemy energy reset to ${this.enemy.maxEnergy}.`);
         this.enemy.energy = this.enemy.maxEnergy;
 
-        // Apply Berserk effect for enemy
         if (this.enemy.berserk > 0) {
             console.log(`[Game] Applying enemy Berserk effect (${this.enemy.berserk})...`);
             this.enemy.energy += this.enemy.berserk;
-            this.log(`${this.enemy.name} gains ${this.enemy.berserk} energy from Berserk.`, 'enemy'); // Game log
+            this.log(`${this.enemy.name} gains ${this.enemy.berserk} energy from Berserk.`, 'enemy');
             console.log(`[Game] Enemy energy increased to ${this.enemy.energy} by Berserk.`);
 
             const berserkDamage = this.enemy.berserk * 2;
-            this.log(`${this.enemy.name} takes ${berserkDamage} damage from Berserk.`, 'enemy'); // Game log
+            this.log(`${this.enemy.name} takes ${berserkDamage} damage from Berserk.`, 'enemy');
              console.log(`[Game] Enemy taking ${berserkDamage} self-damage from Berserk.`);
             const enemyDied = this.dealDamage(this.enemy, this.enemy, berserkDamage, true);
             if (enemyDied) {
                 console.log('[Game] Enemy died from Berserk damage. Turn ended.');
-                return; // enemyDefeated handles the rest
+                return;
             }
         }
 
-        // Reduce Vulnerable duration
-         if (this.enemy.vulnerable > 0) {
+        if (this.enemy.vulnerable > 0) {
              console.log(`[Game] Reducing enemy Vulnerable duration from ${this.enemy.vulnerable}.`);
              this.enemy.vulnerable--;
              if (this.enemy.vulnerable === 0) {
-                this.log(`${this.enemy.name} is no longer Vulnerable.`, 'enemy'); // Game log
+                this.log(`${this.enemy.name} is no longer Vulnerable.`, 'enemy');
                 console.log(`[Game] Enemy is no longer Vulnerable.`);
              } else {
                  console.log(`[Game] Enemy Vulnerable duration now ${this.enemy.vulnerable}.`);
              }
         }
 
-
-        // Draw cards for enemy (simplified, no UI for enemy hand)
         console.log(`[Game] Enemy drawing up to ${HAND_SIZE} cards.`);
         this.enemy.hand = [];
-        for (let i = 0; i < HAND_SIZE; i++) { // Assume enemies also draw HAND_SIZE
+        for (let i = 0; i < HAND_SIZE; i++) {
             if (this.enemy.drawPile.length === 0 && this.enemy.discardPile.length > 0) {
                 console.log(`[Game] Enemy draw pile empty. Shuffling discard pile (${this.enemy.discardPile.length} cards)...`);
-                this.enemy.drawPile = Utils.shuffleArray([...this.enemy.discardPile]); // Utils logs shuffle
+                this.enemy.drawPile = shuffleArray([...this.enemy.discardPile]);
                 this.enemy.discardPile = [];
-                this.log(`${this.enemy.name} shuffles their discard pile.`, 'enemy'); // Game log
+                this.log(`${this.enemy.name} shuffles their discard pile.`, 'enemy');
                 console.log(`[Game] Enemy discard pile shuffled into draw pile. Draw size: ${this.enemy.drawPile.length}`);
             }
             if (this.enemy.drawPile.length > 0) {
                 this.enemy.hand.push(this.enemy.drawPile.pop());
             } else {
                  console.log(`[Game] Enemy draw pile empty, cannot draw more cards.`);
-                 break; // No more cards to draw
+                 break;
             }
         }
         console.log(`[Game] Enemy finished drawing. Hand size: ${this.enemy.hand.length}`);
@@ -336,7 +349,6 @@ class CardBattler {
         this.updateStats();
         console.log('[Game] Stats updated after enemy draw.');
 
-        // Play enemy turn after a delay
         console.log('[Game] Scheduling enemy turn action...');
         setTimeout(() => this.playEnemyTurn(), 1000);
     }
@@ -345,177 +357,146 @@ class CardBattler {
         console.log('[Game] Executing enemy turn action...');
         if (!this.inBattle) {
              console.warn('[Game] playEnemyTurn called but not in battle. Aborting.');
-             return; // Stop if battle ended
+             return;
         }
 
-        // Simple AI: find the first playable card
-        let cardToPlay = null;
-        let cardIndex = -1;
+        await delay(500);
 
-        console.log('[Game] Enemy AI searching for a playable card...');
-         for (let i = 0; i < this.enemy.hand.length; i++) {
-            const cardId = this.enemy.hand[i];
+        const playableCardIndex = this.enemy.hand.findIndex(cardId => {
             const template = getCardTemplate(cardId);
-             console.log(`[Game] AI checking card: ${cardId} (Cost: ${template.cost}, Enemy Energy: ${this.enemy.energy})`);
-            if (template.cost <= this.enemy.energy) {
-                cardToPlay = cardId;
-                cardIndex = i;
-                console.log(`[Game] AI found playable card: ${cardToPlay} at index ${cardIndex}.`);
-                break; // Play the first one found
+            return template && this.enemy.energy >= template.cost;
+        });
+
+        if (playableCardIndex !== -1) {
+            const cardId = this.enemy.hand[playableCardIndex];
+            const cardTemplate = getCardTemplate(cardId);
+             console.log(`[Game] AI checking card: ${cardId} (Cost: ${cardTemplate.cost}, Enemy Energy: ${this.enemy.energy})`);
+
+            if (cardTemplate) {
+                this.enemy.hand.splice(playableCardIndex, 1);
+                 console.log(`[Game] Card ${cardId} removed from enemy hand. Hand size: ${this.enemy.hand.length}`);
+
+                this.enemy.energy -= cardTemplate.cost;
+                console.log(`[Game] Enemy energy after cost: ${this.enemy.energy}`);
+
+                this.log(`${this.enemy.name} plays ${cardTemplate.name}.`, 'enemy');
+                animateCardPlay(cardId, cardTemplate, false);
+                this.updateStats();
+                console.log('[Game] Stats updated after enemy paying cost.');
+
+                await delay(300);
+                console.log('[Game] Delay complete. Executing enemy card effect...');
+
+                cardTemplate.effect(this, this.enemy, this.player);
+                console.log(`[Game] Card effect for ${cardId} finished.`);
+                this.enemy.discardPile.push(cardId);
+                console.log(`[Game] Card ${cardId} moved to enemy discard pile. Discard size: ${this.enemy.discardPile.length}`);
+                this.updateUI();
+                console.log('[Game] UI updated after enemy card effect.');
+
+                if (this.enemy.hp <= 0) {
+                    this.enemyDefeated();
+                    return;
+                }
+
+                this.playEnemyTurn();
+            } else {
+                this.log(`Error: Card template not found for ID: ${cardId}`, 'error');
+                this.endEnemyTurn();
             }
-        }
-
-
-        if (cardToPlay) {
-            console.log(`[Game] Enemy playing card: ${cardToPlay}`);
-            // Remove card from hand *before* playing effect
-            this.enemy.hand.splice(cardIndex, 1);
-             console.log(`[Game] Card ${cardToPlay} removed from enemy hand. Hand size: ${this.enemy.hand.length}`);
-
-
-            const template = getCardTemplate(cardToPlay);
-             console.log(`[Game] Enemy paying energy cost: ${template.cost}. Current energy: ${this.enemy.energy}`);
-            this.enemy.energy -= template.cost;
-            console.log(`[Game] Enemy energy after cost: ${this.enemy.energy}`);
-
-            this.log(`${this.enemy.name} plays ${template.name}.`, 'enemy'); // Game log
-            UI.animateCardPlay(cardToPlay, template, false); // Show floating name
-            this.updateStats(); // Update energy display
-            console.log('[Game] Stats updated after enemy paying cost.');
-
-            // Wait for visual cue before effect
-            console.log('[Game] Waiting for enemy card visual cue...');
-            await Utils.delay(300);
-            console.log('[Game] Delay complete. Executing enemy card effect...');
-
-
-            template.effect(this, this.enemy, this.player); // Card effect should log its actions
-            console.log(`[Game] Card effect for ${cardToPlay} finished.`);
-            this.enemy.discardPile.push(cardToPlay); // Move to discard after effect
-            console.log(`[Game] Card ${cardToPlay} moved to enemy discard pile. Discard size: ${this.enemy.discardPile.length}`);
-            this.updateUI(); // Update after effect resolution
-            console.log('[Game] UI updated after enemy card effect.');
-
-
-            // Check if game ended
-            if (!this.inBattle) {
-                console.log('[Game] Battle ended during enemy card effect. Stopping enemy turn.');
-                return; // Stop if battle ended during card effect
-            }
-
-            // Continue playing if possible after a delay
-            console.log('[Game] Scheduling next enemy action...');
-            setTimeout(() => this.playEnemyTurn(), 800);
-
         } else {
-            // No playable cards, end turn
-            console.log('[Game] Enemy AI found no playable cards. Ending turn.');
+            this.log('Enemy has no more playable cards.', 'enemy');
             this.endEnemyTurn();
         }
     }
 
-     endEnemyTurn() {
+    endEnemyTurn() {
         console.log('[Game] Ending enemy turn...');
-        this.log(`${this.enemy.name} ends their turn.`, 'enemy'); // Game log
+        this.log(`${this.enemy.name} ends their turn.`, 'enemy');
 
-        // Discard hand (no UI update needed for enemy hand)
         console.log(`[Game] Discarding enemy hand. Hand size: ${this.enemy.hand.length}`);
         this.enemy.discardPile.push(...this.enemy.hand);
         this.enemy.hand = [];
         console.log(`[Game] Enemy hand discarded. Discard size: ${this.enemy.discardPile.length}`);
 
-
-        this.updateStats(); // Update just in case block/energy changed implicitly
+        this.updateStats();
         console.log('[Game] Stats updated after enemy turn end.');
 
-        // Start player turn after a delay
         console.log('[Game] Scheduling player turn start...');
         setTimeout(() => this.startPlayerTurn(), 1000);
     }
 
-
     drawCard() {
-        // Check hand size limit
-        if (this.player.hand.length >= 10) { // Max hand size limit
-            console.warn(`[Game] Player hand is full (${this.player.hand.length}/10). Burning next card.`);
-            this.log(`${this.player.name}'s hand is full! Card burned.`, 'player'); // Game log
-             // Check if shuffle is needed before burning
-             if (this.player.drawPile.length === 0 && this.player.discardPile.length > 0) {
+        if (this.player.hand.length >= MAX_HAND_SIZE) {
+            console.warn(`[Game] Player hand is full (${this.player.hand.length}/${MAX_HAND_SIZE}). Burning next card.`);
+            this.log(`${this.player.name}'s hand is full! Card burned.`, 'player');
+            
+            if (this.player.drawPile.length === 0 && this.player.discardPile.length > 0) {
                 console.log(`[Game] Player draw pile empty. Shuffling discard pile (${this.player.discardPile.length} cards) before burning...`);
-                this.player.drawPile = Utils.shuffleArray([...this.player.discardPile]); // Utils logs shuffle
+                this.player.drawPile = shuffleArray([...this.player.discardPile]);
                 this.player.discardPile = [];
-                this.log(`${this.player.name} shuffles their discard pile.`, 'player'); // Game log
+                this.log(`${this.player.name} shuffles their discard pile.`, 'player');
                 console.log(`[Game] Player discard pile shuffled into draw pile. Draw size: ${this.player.drawPile.length}`);
             }
-             // Burn the card if possible
-             if (this.player.drawPile.length > 0) {
-                 const burnedCard = this.player.drawPile.pop();
-                 console.log(`[Game] Burned card: ${burnedCard}. Draw pile size: ${this.player.drawPile.length}`);
-                 // Optionally, move burned card to a separate pile or just log it
-             } else {
-                  console.warn('[Game] Player hand full, but no cards in draw pile to burn.');
+            
+            if (this.player.drawPile.length > 0) {
+                const burnedCard = this.player.drawPile.pop();
+                console.log(`[Game] Burned card: ${burnedCard}. Draw pile size: ${this.player.drawPile.length}`);
+            } else {
+                 console.warn('[Game] Player hand full, but no cards in draw pile to burn.');
              }
-            return; // Don't draw
+            return;
         }
 
-        // Shuffle if necessary
         if (this.player.drawPile.length === 0 && this.player.discardPile.length > 0) {
             console.log(`[Game] Player draw pile empty. Shuffling discard pile (${this.player.discardPile.length} cards)...`);
-            this.player.drawPile = Utils.shuffleArray([...this.player.discardPile]); // Utils logs shuffle
+            this.player.drawPile = shuffleArray([...this.player.discardPile]);
             this.player.discardPile = [];
-            this.log(`${this.player.name} shuffles their discard pile.`, 'player'); // Game log
+            this.log(`${this.player.name} shuffles their discard pile.`, 'player');
             console.log(`[Game] Player discard pile shuffled into draw pile. Draw size: ${this.player.drawPile.length}`);
         }
 
-        // Draw the card
         if (this.player.drawPile.length > 0) {
             const cardId = this.player.drawPile.pop();
             this.player.hand.push(cardId);
             console.log(`[Game] Player drew card: ${cardId}. Hand size: ${this.player.hand.length}, Draw pile size: ${this.player.drawPile.length}`);
-            // Don't log every draw to game log, it's too noisy
-            // this.log(`${this.player.name} draws a card.`, 'player');
         } else {
             console.log(`[Game] Player has no cards left in draw or discard piles.`);
-            this.log(`${this.player.name} has no cards left to draw.`, 'player'); // Game log
+            this.log(`${this.player.name} has no cards left to draw.`, 'player');
         }
-        // UI Update happens in the calling function (startPlayerTurn) or after card effect
     }
 
     dealDamage(source, target, amount, ignoreBlock = false) {
         console.log(`[Game] Calculating damage: ${source.name} -> ${target.name}, Base amount: ${amount}, Ignore block: ${ignoreBlock}`);
         if (amount <= 0) {
              console.log('[Game] Damage amount is zero or less. No damage dealt.');
-             return false; // No damage dealt
+             return false;
         }
 
         let finalAmount = amount;
 
-        // Apply strength bonus
         if (source !== target && source.strength) {
             console.log(`[Game] Applying source strength bonus: +${source.strength}`);
             finalAmount += source.strength;
         }
 
-        // Apply Vulnerable
         if (target.vulnerable > 0) {
             const vulnerableMultiplier = 1.5;
             const amountBeforeVulnerable = finalAmount;
             finalAmount = Math.floor(finalAmount * vulnerableMultiplier);
             console.log(`[Game] Applying target Vulnerable bonus (${target.vulnerable} turns): ${amountBeforeVulnerable} * ${vulnerableMultiplier} -> ${finalAmount}`);
-            // Vulnerable counter decreases at start of target's turn, not here
         }
 
         let damageDealt = finalAmount;
         let blockedAmount = 0;
 
-        // Apply block if not ignoring
         if (!ignoreBlock && target.block > 0) {
             console.log(`[Game] Target has ${target.block} block. Applying block...`);
             blockedAmount = Math.min(target.block, finalAmount);
             target.block -= blockedAmount;
             damageDealt = finalAmount - blockedAmount;
             if (blockedAmount > 0) {
-                 this.log(`${target.name}'s block absorbs ${blockedAmount} damage.`, source === this.player ? 'player' : 'enemy'); // Game log
+                 this.log(`${target.name}'s block absorbs ${blockedAmount} damage.`, source === this.player ? 'player' : 'enemy');
                  console.log(`[Game] Block absorbed ${blockedAmount} damage. Remaining block: ${target.block}`);
             }
         } else if (ignoreBlock) {
@@ -524,71 +505,81 @@ class CardBattler {
              console.log(`[Game] Target has no block.`);
         }
 
-        // Apply damage to HP
         if (damageDealt > 0) {
              console.log(`[Game] Dealing ${damageDealt} damage to ${target.name}'s HP (${target.hp}).`);
             target.hp -= damageDealt;
-            this.log(`${source.name} deals ${damageDealt} damage to ${target.name}.`, source === this.player ? 'player' : 'enemy'); // Game log
+            this.log(`${source.name} deals ${damageDealt} damage to ${target.name}.`, source === this.player ? 'player' : 'enemy');
             console.log(`[Game] ${target.name} HP after damage: ${target.hp}`);
-            UI.showDamageEffect(target === this.player ? UI.elements.player : UI.elements.enemy, damageDealt); // UI logs effect start
+
+            let targetElement = null;
+            if (target === this.player) {
+                targetElement = elements.player;
+                 console.log('[Game] Damage target identified as player. Using player element.');
+            } else if (target === this.enemy) {
+                targetElement = elements.enemyContainer;
+                 console.log('[Game] Damage target identified as enemy. Using enemy container element.');
+            } else {
+                 console.warn('[Game] Could not determine target type (player/enemy) for damage effect.');
+            }
+
+            if (targetElement) {
+                showDamageEffect(targetElement, damageDealt);
+            } else {
+                console.warn(`[Game] Could not find UI element for target '${target?.name || 'UNKNOWN'}' to apply damage effect.`);
+            }
         } else {
              console.log('[Game] No damage dealt to HP after block application.');
         }
 
-        this.updateStats(); // Update UI after HP/Block changes
+        this.updateStats();
         console.log('[Game] Stats updated after damage calculation.');
 
-        // Check for lethal
         if (target.hp <= 0) {
             console.log(`[Game] Target ${target.name} HP reached zero or below.`);
-            target.hp = 0; // Ensure HP doesn't go negative
+            target.hp = 0;
             if (target === this.enemy) {
                 console.log('[Game] Enemy defeated.');
                 this.enemyDefeated();
-                return true; // Target was defeated
+                return true;
             } else {
                 console.log('[Game] Player defeated.');
-                this.gameOver(false); // Player was defeated
-                return true; // Target was defeated
+                this.gameOver(false);
+                return true;
             }
         }
         console.log(`[Game] Target ${target.name} survived the damage.`);
-        return false; // Target survived
+        return false;
     }
 
     enemyDefeated() {
         console.log('[Game] Processing enemy defeat...');
-        this.inBattle = false; // Mark battle as ended
+        this.inBattle = false;
         console.log('[Game] Battle state set: inBattle=false');
-        this.log(`${this.enemy.name} has been defeated!`, 'reward'); // Game log
-        this.updateStats(); // Update final enemy HP to 0
+        this.log(`${this.enemy.name} has been defeated!`, 'reward');
+        this.updateStats();
 
-        // If max floor reached, trigger victory directly
         if (this.currentFloor >= MAX_FLOOR) {
              console.log(`[Game] Max floor (${MAX_FLOOR}) reached. Triggering victory.`);
              this.gameOver(true);
         } else {
             console.log('[Game] Showing reward screen and enabling next floor button.');
             this.showReward();
-            UI.elements.nextFloorBtn.disabled = false;
-            UI.elements.viewDeckBtn.disabled = false; // Re-enable deck view
+            elements.nextFloorBtn.disabled = false;
+            elements.viewDeckBtn.disabled = false;
         }
         console.log('[Game] Enemy defeat processing complete.');
     }
 
     showReward() {
         console.log('[Game] Generating rewards...');
-        // Generate 3 random card choices
         const rewardCardIds = [];
         const rarities = ['common', 'uncommon', 'rare'];
 
-        // Basic rarity weighting (adjust as needed)
         let commonChance = 0.6;
         let uncommonChance = 0.3;
         let rareChance = 0.1;
 
-        // Slightly increase chances of better cards on higher floors
-        const floorBonus = Math.min(this.currentFloor * 0.02, 0.2); // Max 20% shift
+        const floorBonus = Math.min(this.currentFloor * 0.02, 0.2);
         commonChance = Math.max(0.1, commonChance - floorBonus);
         rareChance += floorBonus / 2;
         uncommonChance = 1 - commonChance - rareChance;
@@ -606,21 +597,21 @@ class CardBattler {
              console.log(`[Game] Selected rarity: ${selectedRarity}`);
 
             const possibleCards = CARD_TEMPLATES.filter(card => card.rarity === selectedRarity);
-            if (possibleCards.length === 0) { // Fallback if no cards of that rarity exist
+            if (possibleCards.length === 0) {
                  i--; continue;
             }
 
             let cardTemplate;
             do {
                  cardTemplate = possibleCards[Math.floor(Math.random() * possibleCards.length)];
-            } while (rewardCardIds.includes(cardTemplate.id)); // Avoid duplicates in the reward screen
+            } while (rewardCardIds.includes(cardTemplate.id));
 
              console.log(`[Game] Chosen reward card ${i+1}: ${cardTemplate.id}`);
             rewardCardIds.push(cardTemplate.id);
         }
 
         console.log('[Game] Displaying reward UI with cards:', rewardCardIds);
-        UI.showRewardUI(rewardCardIds, (chosenCardId) => this.handleRewardChoice(chosenCardId)); // UI logs show
+        showRewardUI(rewardCardIds, this.handleRewardChoice.bind(this));
     }
 
     handleRewardChoice(chosenCardId) {
@@ -628,64 +619,57 @@ class CardBattler {
         if (chosenCardId) {
             this.player.deck.push(chosenCardId);
             const cardTemplate = getCardTemplate(chosenCardId);
-            this.log(`Added ${cardTemplate.name} to your deck!`, 'reward'); // Game log
+            this.log(`Added ${cardTemplate.name} to your deck!`, 'reward');
             console.log(`[Game] Added ${chosenCardId} to player deck. New deck size: ${this.player.deck.length}`);
         } else {
-            this.log('Skipped card reward.', 'system'); // Game log
+            this.log('Skipped card reward.', 'system');
             console.log('[Game] Player skipped reward.');
         }
         console.log('[Game] Reward choice handled.');
-        // UI hides itself in showRewardUI callback
     }
-
 
     nextFloor() {
         console.log(`[Game] Advancing to next floor from floor ${this.currentFloor}.`);
         this.currentFloor++;
-        UI.updateFloorInfoUI(this.currentFloor); // UI logs update
+        updateFloorInfoUI(this.currentFloor);
 
-        // Heal player
         const hpBeforeHeal = this.player.hp;
-        const healAmount = Math.min(this.player.maxHp - this.player.hp, Math.floor(this.player.maxHp * 0.3)); // Heal 30% or up to full
+        const healAmount = Math.min(this.player.maxHp - this.player.hp, Math.floor(this.player.maxHp * 0.3));
         if (healAmount > 0) {
             this.player.hp += healAmount;
-            this.log(`You rest and recover ${healAmount} HP.`, 'reward'); // Game log
+            this.log(`You rest and recover ${healAmount} HP.`, 'reward');
             console.log(`[Game] Player healed for ${healAmount} HP. HP: ${hpBeforeHeal} -> ${this.player.hp}`);
-            UI.showHealEffect(UI.elements.player, healAmount); // UI logs effect
+            showHealEffect(elements.player, healAmount);
         } else {
             console.log('[Game] Player already at max HP or heal amount is zero. No healing applied.');
         }
 
         console.log('[Game] Generating enemy for the new floor...');
-        this.generateEnemy(); // Logs internally
-        this.updateUI(); // Update HP and enemy info
+        this.generateEnemy();
+        this.updateUI();
         console.log('[Game] UI updated for new floor.');
 
-        UI.elements.startBattleBtn.disabled = false; // Enable start for next battle
-        UI.elements.nextFloorBtn.disabled = true;
+        elements.startBattleBtn.disabled = false;
+        elements.nextFloorBtn.disabled = true;
         console.log('[Game] Buttons updated for new floor (Start enabled, Next disabled).');
 
-
-        this.log(`Entering Floor ${this.currentFloor}...`, 'system'); // Game log
+        this.log(`Entering Floor ${this.currentFloor}...`, 'system');
         console.log(`[Game] Entered Floor ${this.currentFloor}. Ready for player to start battle.`);
-
-         // No auto-start, let player click "Start Battle"
-         // setTimeout(() => this.startBattle(), 1000);
     }
 
     gameOver(victory) {
         console.log(`[Game] Game Over. Victory: ${victory}`);
-        this.inBattle = false; // Ensure battle state is off
+        this.inBattle = false;
         console.log('[Game] Battle state set: inBattle=false');
-        UI.showGameOverUI(victory, this.currentFloor); // UI logs show
+        showGameOverUI(victory, this.currentFloor);
         if (victory) {
-            this.log('Congratulations! You have conquered the spire!', 'reward'); // Game log
+            this.log('Congratulations! You have conquered the spire!', 'reward');
         } else {
-            this.log('Game over! You have been defeated.', 'system'); // Game log
+            this.log('Game over! You have been defeated.', 'system');
         }
-        UI.elements.startBattleBtn.disabled = true;
-        UI.elements.nextFloorBtn.disabled = true;
-        UI.elements.viewDeckBtn.disabled = true; // Disable deck view on game over
+        elements.startBattleBtn.disabled = true;
+        elements.nextFloorBtn.disabled = true;
+        elements.viewDeckBtn.disabled = true;
         console.log('[Game] Game over buttons disabled.');
     }
 
@@ -697,39 +681,33 @@ class CardBattler {
 
     viewDeck() {
         console.log('[Game] Showing deck view UI...');
-        UI.showDeckUI(this.player); // UI logs show
+        showDeckUI(this.player);
     }
 
     hideViewDeck() {
          console.log('[Game] Hiding deck view UI...');
-        UI.hideDeckUI(); // UI logs hide
+        hideDeckUI();
     }
 
-    // Update all relevant UI parts
     updateUI() {
-         // console.debug('[Game] Updating Full UI (Stats + Hand)...'); // Can be noisy
+        console.log('[Game] Updating UI (Stats and Hand)...');
         this.updateStats();
-        UI.updatePlayerHandUI(this.player.hand); // UI logs update
+        updatePlayerHandUI(this.player.hand);
+        console.log('[Game] updatePlayerHandUI called.');
     }
 
-    // Update only the stat displays
     updateStats() {
-        // console.debug('[Game] Updating Stats UI...'); // Can be noisy
-        UI.updateStatsUI(this.player, this.enemy); // UI logs update
+        console.log('[Game] Updating Stats UI...');
+        updateStatsUI(this.player, this.inBattle ? this.enemy : null);
+        console.log('[Game] updateStatsUI called.');
     }
 
-     // Centralized logging to game window
     log(message, type = 'system') {
-        // console.debug(`[Game][Log] ${type}: ${message}`); // Log to console as well
-        UI.logMessage(message, type); // UI logs add
+        logMessage(message, type);
     }
 }
 
-// Initialize game when script loads
 window.addEventListener('load', () => {
     console.log('[Game] Window loaded. Initializing game instance.');
     const game = new CardBattler();
-    // Make game instance globally accessible for debugging (optional)
-    // window.currentGame = game;
-    // console.log('[Game] Game instance created and potentially assigned to window.currentGame.');
 }); 

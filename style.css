@@ -98,36 +98,54 @@ h2 {
 .card {
     width: 120px;
     height: 170px;
-    border: 2px solid #555;
+    border: 3px solid #555;
     border-radius: 10px;
-    padding: 10px;
     background-color: #222;
-    display: flex;
-    flex-direction: column;
     transition: transform 0.3s, box-shadow 0.3s;
     position: relative;
-    cursor: default; /* No longer clickable directly */
+    cursor: default;
     transform-origin: center bottom;
-    box-sizing: border-box; /* Include padding and border in element's total width and height */
-    overflow: hidden; /* Prevent content spillover */
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.card-background-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+    opacity: 0.7;
+}
+
+.card-content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    box-sizing: border-box;
+    color: white;
+    text-shadow: 1px 1px 2px black;
 }
 
 .card:hover {
-    /* Keep hover for rewards/deck view, remove interactivity in hand */
-    /* transform: translateY(-10px) scale(1.05); */
-    /* box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5); */
-    /* z-index: 10; */
+    transform: translateY(-10px) scale(1.05);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    cursor: pointer;
 }
 
-/* Make reward/deck cards interactive */
 .reward-options .card:hover,
 .deck-grid .card:hover {
-     transform: translateY(-10px) scale(1.05);
-     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
-     z-index: 10;
-     cursor: pointer;
+    transform: translateY(-10px) scale(1.05);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    cursor: pointer;
 }
-
 
 .card.played {
     animation: card-played 1s forwards;
@@ -139,56 +157,47 @@ h2 {
     100% { transform: translateY(200px) scale(0.5) rotate(20deg); opacity: 0; }
 }
 
-.card.attack {
-    border-color: #ff5555;
-}
 .card.attack .card-name { color: #ffaaaa; }
-
-.card.defense {
-    border-color: #5555ff;
-}
 .card.defense .card-name { color: #aaaaff; }
-
-.card.skill {
-    border-color: #55ff55;
-}
 .card.skill .card-name { color: #aaffaa; }
-
 
 .card-cost {
     position: absolute;
-    top: 5px;
-    left: 5px;
-    background-color: #333;
+    top: 8px;
+    right: 8px;
+    background-color: rgba(0,0,0,0.7);
     border: 1px solid #777;
-    color: #eee;
+    color: yellow;
     border-radius: 50%;
-    width: 25px;
-    height: 25px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    font-size: 14px;
-    z-index: 1; /* Above name */
+    font-size: 0.9em;
+    z-index: 3;
+    box-sizing: border-box;
 }
 
 .card-name {
-    margin-top: 25px; /* Below cost */
     font-weight: bold;
     text-align: center;
-    font-size: 14px;
+    font-size: 1.1em;
     margin-bottom: 5px;
 }
 
 .card-description {
-    margin-top: auto; /* Push description towards bottom */
-    margin-bottom: 5px;
-    font-size: 11px; /* Slightly smaller */
-    flex-grow: 1;
+    margin-top: auto;
+    margin-bottom: 0;
+    font-size: 0.9em;
     text-align: center;
-    line-height: 1.3;
-    padding: 0 5px;
+    line-height: 1.2;
+    padding: 5px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 4px;
+    overflow: hidden;
+    max-height: 50%;
 }
 
 .card-type {
@@ -206,7 +215,7 @@ h2 {
     padding: 10px;
     margin-bottom: 20px;
     background-color: #111;
-    font-size: 13px; /* Smaller log font */
+    font-size: 13px;
     line-height: 1.4;
 }
 
@@ -248,7 +257,7 @@ button:disabled {
 }
 
 .reward-container {
-    display: none; /* Managed by JS */
+    display: none;
     flex-direction: column;
     align-items: center;
     gap: 15px;
@@ -266,7 +275,7 @@ button:disabled {
 }
 
 .game-over {
-    display: none; /* Managed by JS */
+    display: none;
     text-align: center;
     margin-top: 20px;
     border: 1px dashed #ff5555;
@@ -275,11 +284,8 @@ button:disabled {
 }
 .game-over h2 { color: #ff5555; }
 
-
-/* --- Animations & Effects --- */
-
 .damage-text {
-    position: absolute; /* Position relative to nearest positioned ancestor (body or .character) */
+    position: absolute;
     color: #ff5555;
     font-weight: bold;
     font-size: 24px;
@@ -327,47 +333,45 @@ button:disabled {
 }
 
 @keyframes flash {
-    0%, 100% { background-color: #222; } /* Assuming default character bg */
+    0%, 100% { background-color: #222; }
     50% { background-color: #555; }
 }
-/* Flash specifically for player/enemy borders */
+
 .player.flash {
     animation: flash-border-player 0.3s;
 }
 .enemy.flash {
-     animation: flash-border-enemy 0.3s;
+    animation: flash-border-enemy 0.3s;
 }
 @keyframes flash-border-player {
     0%, 100% { border-color: #5555ff; }
     50% { border-color: #aaaaff; }
 }
 @keyframes flash-border-enemy {
-     0%, 100% { border-color: #ff5555; }
-     50% { border-color: #ffaaaa; }
+    0%, 100% { border-color: #ff5555; }
+    50% { border-color: #ffaaaa; }
 }
 
-
 .deck-builder {
-    display: none; /* Managed by JS */
+    display: none;
     flex-direction: column;
     align-items: center;
     margin-top: 20px;
     padding: 20px;
     border: 1px solid #ccc;
     background-color: #1a1a1a;
-    width: 100%; /* Take full width within container */
+    width: 100%;
     box-sizing: border-box;
 }
 .deck-builder h2 { margin-bottom: 15px; }
 
 .deck-grid {
     display: grid;
-    /* Adjust columns based on screen size potentially, or fix like this */
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 15px;
     margin-top: 15px;
     width: 100%;
-    max-width: 700px; /* Limit grid width */
+    max-width: 700px;
 }
 
 .deck-stats {
@@ -392,7 +396,7 @@ button:disabled {
     gap: 15px;
     justify-content: center;
     margin-top: 15px;
-    margin-bottom: 15px; /* Add some space below */
+    margin-bottom: 15px;
 }
 
 .player-stat {
@@ -409,7 +413,7 @@ button:disabled {
     margin-bottom: 5px;
 }
 .player-stat .stat-value {
-    font-size: 16px; /* Slightly smaller for deck view */
+    font-size: 16px;
 }
 
 /* No stat upgrade buttons in this version */

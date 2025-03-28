@@ -2,6 +2,28 @@
 
 This document provides a summary of the JavaScript files and the functions they contain.
 
+## Project Structure
+
+The project includes the following key folders:
+- `images/` - Contains game images and visual assets
+  - `cards/` - Contains card artwork and icons
+
+## `constants.js`
+
+Contains constant values used across the application.
+
+### Variables
+
+1.  **`CARD_TYPES`**
+    *   **Purpose:** An object defining constant string values for different card types (`ATTACK`, `DEFENSE`, `SKILL`).
+    *   **Usage:** Provides consistent identifiers for card types throughout the codebase.
+2.  **`MAX_MOMENTUM`**
+    *   **Purpose:** Defines the maximum momentum a player can accumulate (currently 10). Reaching this value ends the player's turn.
+3.  **`MOMENTUM_GAIN_ZERO_COST`**
+    *   **Purpose:** Defines the amount of momentum gained from playing a 0-cost card (currently 2).
+4.  **`MOMENTUM_GAIN_DEFAULT`**
+    *   **Purpose:** Defines the amount of momentum gained from playing a 1 or 2-cost card (currently 1).
+
 ## `utils.js`
 
 Contains general utility functions used throughout the application.
@@ -26,7 +48,7 @@ Handles all interactions with the Document Object Model (DOM), updating the user
 ### Variables
 
 1.  **`elements`**
-    *   **Purpose:** An object containing references to various DOM elements, obtained using `document.getElementById`. This provides a central place to access UI elements.
+    *   **Purpose:** An object containing references to various DOM elements, obtained using `document.getElementById`. Includes references for player/enemy stats, hand, log, buttons, game over/reward/deck screens, **and player momentum display (`playerMomentum`, `playerMaxMomentum`)**.
 
 ### Functions
 
@@ -43,12 +65,12 @@ Handles all interactions with the Document Object Model (DOM), updating the user
     *   **Side Effects:** Modifies the `innerHTML` of the `elements.playerHand` element. Logs the update process and any errors if card templates are not found.
 
 3.  **`updateStatsUI(player, enemy)`**
-    *   **Purpose:** Updates the displayed stats (HP, Energy, Block) for both the player and the enemy.
+    *   **Purpose:** Updates the displayed stats (HP, Energy, Block, **Momentum**) for both the player and the enemy.
     *   **Input:**
-        *   `player` (Object) - The player object containing stats like `hp`, `maxHp`, `block`, `energy`, `maxEnergy`.
+        *   `player` (Object) - The player object containing stats like `hp`, `maxHp`, `block`, `energy`, `maxEnergy`, **`momentum`**.
         *   `enemy` (Object, optional) - The enemy object containing similar stats. If not provided, enemy stats display is cleared.
     *   **Output:** None.
-    *   **Side Effects:** Modifies the `textContent` of various stat display elements (`elements.playerHp`, `elements.playerEnergy`, `elements.enemyHp`, etc.). Logs the update process.
+    *   **Side Effects:** Modifies the `textContent` of various stat display elements (`elements.playerHp`, `elements.playerEnergy`, `elements.playerMomentum`, `elements.enemyHp`, etc.). Logs the update process.
 
 4.  **`updateFloorInfoUI(floor)`**
     *   **Purpose:** Updates the display showing the current floor number.
@@ -100,7 +122,13 @@ Handles all interactions with the Document Object Model (DOM), updating the user
     *   **Input:** `type` (String) - The type of the card (e.g., `CARD_TYPES.ATTACK`).
     *   **Output:** (String) - A hex color code string (e.g., `#ff5555`).
 
-11. **`showRewardUI(rewardCardIds, onRewardChosen)`**
+11. **`showMomentumBurstEffect()`**
+    *   **Purpose:** Creates a temporary visual effect (centered image fade-in/out) to indicate that maximum momentum has been reached and the turn is ending.
+    *   **Input:** None.
+    *   **Output:** None.
+    *   **Side Effects:** Creates and removes a temporary `div` containing an `img` element (`/images/momentum-burst.png`) in the `document.body`. Logs the effect being shown.
+
+12. **`showRewardUI(rewardCardIds, onRewardChosen)`**
     *   **Purpose:** Displays the reward screen, allowing the player to choose one card from a selection or skip the reward.
     *   **Input:**
         *   `rewardCardIds` (Array) - An array of card IDs offered as rewards.
@@ -108,7 +136,7 @@ Handles all interactions with the Document Object Model (DOM), updating the user
     *   **Output:** None.
     *   **Side Effects:** Makes the `elements.rewardContainer` visible, populates `elements.rewardOptions` with card elements and a skip button, and adds event listeners to them. Logs the UI display process and the choice made.
 
-12. **`showGameOverUI(victory, floor)`**
+13. **`showGameOverUI(victory, floor)`**
     *   **Purpose:** Displays the game over screen with a victory or defeat message.
     *   **Input:**
         *   `victory` (Boolean) - `true` if the player won, `false` otherwise.
@@ -116,25 +144,25 @@ Handles all interactions with the Document Object Model (DOM), updating the user
     *   **Output:** None.
     *   **Side Effects:** Makes the `elements.gameOver` element visible, updates the message, and disables battle/navigation buttons. Logs the UI display.
 
-13. **`hideGameOverUI()`**
+14. **`hideGameOverUI()`**
     *   **Purpose:** Hides the game over screen.
     *   **Input:** None.
     *   **Output:** None.
     *   **Side Effects:** Hides the `elements.gameOver` element. Logs the UI hiding action.
 
-14. **`showDeckUI(player)`**
+15. **`showDeckUI(player)`**
     *   **Purpose:** Displays the deck view/builder screen.
     *   **Input:** `player` (Object) - The player object, needed to display the deck and stats.
     *   **Output:** None.
     *   **Side Effects:** Makes the `elements.deckBuilder` element visible and calls `updateDeckViewUI` to populate it. Logs the UI display.
 
-15. **`hideDeckUI()`**
+16. **`hideDeckUI()`**
     *   **Purpose:** Hides the deck view/builder screen.
     *   **Input:** None.
     *   **Output:** None.
     *   **Side Effects:** Hides the `elements.deckBuilder` element. Logs the UI hiding action.
 
-16. **`updateDeckViewUI(player)`**
+17. **`updateDeckViewUI(player)`**
     *   **Purpose:** Updates the content of the deck view screen, displaying player stats, deck statistics, and the cards in the deck.
     *   **Input:** `player` (Object) - The player object containing the deck and stats.
     *   **Output:** None.
@@ -148,9 +176,18 @@ Manages the core game logic, state, and flow for the Card Battler game. It integ
 
 The main class orchestrating the game.
 
+#### Momentum Mechanic
+
+*   **Momentum** is a resource gained by playing cards.
+*   Playing 0-cost cards grants 2 Momentum.
+*   Playing 1 or 2-cost cards grants 1 Momentum.
+*   Momentum resets to 0 at the start of each player turn.
+*   If Momentum reaches `MAX_MOMENTUM` (10), the player's turn immediately ends after the current card resolves, and a visual effect is shown.
+*   Certain cards can **spend** Momentum for additional effects. This spending is usually mandatory if the card specifies it and the player has sufficient Momentum.
+
 #### Properties
 
-*   `player`: (Object) Stores the player's current state (HP, energy, deck, hand, etc.).
+*   `player`: (Object) Stores the player's current state (HP, energy, deck, hand, **momentum**, etc.).
 *   `enemy`: (Object) Stores the current enemy's state.
 *   `currentFloor`: (Number) Tracks the current floor number.
 *   `inBattle`: (Boolean) Flag indicating if a battle is currently active.
@@ -159,13 +196,13 @@ The main class orchestrating the game.
 #### Methods
 
 1.  **`constructor()`**
-    *   **Purpose:** Initializes the game instance, sets up initial state properties, binds UI event listeners, and starts a new game.
+    *   **Purpose:** Initializes the game instance, sets up initial state properties (including `player.momentum = 0`), binds UI event listeners, and starts a new game.
     *   **Input:** None.
     *   **Output:** None.
     *   **Side Effects:** Creates player/enemy objects, sets floor, binds listeners, calls `setUpNewGame`. Logs initialization steps.
 
 2.  **`setUpNewGame()`**
-    *   **Purpose:** Resets the game to its starting state for a new game. Initializes player stats, deck, generates the first enemy, updates UI elements, and clears the log.
+    *   **Purpose:** Resets the game to its starting state for a new game. Initializes player stats (including `momentum = 0`), deck, generates the first enemy, updates UI elements, and clears the log.
     *   **Input:** None.
     *   **Output:** None.
     *   **Side Effects:** Resets `player`, `currentFloor`, generates `enemy`, updates UI (`floorInfo`, stats, buttons, log), hides game over/deck UI. Logs setup process.
@@ -177,22 +214,22 @@ The main class orchestrating the game.
     *   **Side Effects:** Updates the `this.enemy` property, updates the enemy name and stats in the UI. Logs enemy generation.
 
 4.  **`startBattle()`**
-    *   **Purpose:** Initiates a battle sequence against the current enemy. Resets battle-specific player and enemy states (hand, draw pile, block, energy, status effects).
+    *   **Purpose:** Initiates a battle sequence against the current enemy. Resets battle-specific player and enemy states (hand, draw pile, block, energy, status effects, **momentum**).
     *   **Input:** None.
     *   **Output:** None.
-    *   **Side Effects:** Sets `inBattle` to `true`, resets `battleTurn`, shuffles decks, resets block/energy/status, updates UI (disables buttons), calls `startPlayerTurn`. Logs battle start.
+    *   **Side Effects:** Sets `inBattle` to `true`, resets `battleTurn`, shuffles decks, resets block/energy/status/**momentum**, updates UI (disables buttons), calls `startPlayerTurn`. Logs battle start.
 
 5.  **`startPlayerTurn()`**
-    *   **Purpose:** Begins the player's turn. Increments turn counter, resets player block and energy, handles start-of-turn effects (Berserk damage, Vulnerable countdown), draws cards, updates UI, and schedules the automated player action.
+    *   **Purpose:** Begins the player's turn. Increments turn counter, resets player block, energy, **and momentum**, handles start-of-turn effects, draws cards, updates UI, and schedules the automated player action.
     *   **Input:** None.
     *   **Output:** None.
-    *   **Side Effects:** Modifies player state (block, energy, status effects, hand, draw/discard piles), updates UI, logs turn start and effects, calls `drawCard`, schedules `playPlayerTurn`.
+    *   **Side Effects:** Modifies player state (block, energy, **momentum**, status effects, hand, draw/discard piles), updates UI, logs turn start and effects, calls `drawCard`, schedules `playPlayerTurn`.
 
 6.  **`playPlayerTurn()`**
-    *   **Purpose:** Simulates the player's turn using a simple AI. Finds the first playable card, plays it (updates state, triggers effects, animates), and schedules the next action or ends the turn if no cards are playable.
+    *   **Purpose:** Simulates the player's turn using a simple AI. Finds a playable card, plays it (spends energy, potentially spends momentum via card effect, updates state, triggers effects, animates), increases momentum based on card cost, checks if momentum cap is reached (ending turn if so), and schedules the next action or ends the turn if no cards are playable.
     *   **Input:** None.
     *   **Output:** (Promise) Resolves when the action (playing a card or deciding to end turn) is complete.
-    *   **Side Effects:** Modifies player state (energy, hand, discard pile), calls card effects, updates UI, animates card play, logs actions, schedules itself recursively or calls `endPlayerTurn`.
+    *   **Side Effects:** Modifies player/enemy state (energy, **momentum**, hand, discard pile, HP, block), calls card effects, updates UI, animates card play, logs actions, potentially calls `UI.showMomentumBurstEffect` and `endPlayerTurn` early, schedules itself recursively or calls `endPlayerTurn`.
 
 7.  **`endPlayerTurn()`**
     *   **Purpose:** Concludes the player's turn. Discards the player's hand and schedules the enemy's turn.
@@ -289,7 +326,7 @@ The main class orchestrating the game.
     *   **Side Effects:** Calls `updateStats` and `UI.updatePlayerHandUI`.
 
 22. **`updateStats()`**
-    *   **Purpose:** Updates the player and enemy stat displays (HP, Energy, Block, etc.) in the UI.
+    *   **Purpose:** Updates the player and enemy stat displays (HP, Energy, Block, **Momentum**, etc.) in the UI.
     *   **Input:** None.
     *   **Output:** None.
     *   **Side Effects:** Calls `UI.updateStatsUI`.
@@ -301,16 +338,6 @@ The main class orchestrating the game.
         *   `type` (String, optional, default: `'system'`) - Type for styling (e.g., 'player', 'enemy').
     *   **Output:** None.
     *   **Side Effects:** Calls `UI.logMessage`.
-
-## `constants.js`
-
-Contains constant values used across the application.
-
-### Variables
-
-1.  **`CARD_TYPES`**
-    *   **Purpose:** An object defining constant string values for different card types (`ATTACK`, `DEFENSE`, `SKILL`).
-    *   **Usage:** Provides consistent identifiers for card types throughout the codebase.
 
 ## `enemies.js`
 
@@ -336,8 +363,8 @@ Defines card templates, including their effects, and provides a way to retrieve 
 ### Variables
 
 1.  **`CARD_TEMPLATES`**
-    *   **Purpose:** An array of template objects, each defining a specific card. Includes properties like `id`, `name`, `type`, `cost`, `description`, `rarity`, and an `effect` function.
-    *   **`effect(game, source, target)`:** A function within each card template that defines the card's logic when played. It receives the game instance (`game`), the entity playing the card (`source`), and the target entity (`target`), and modifies the game state accordingly.
+    *   **Purpose:** An array of template objects, each defining a specific card. Includes properties like `id`, `name`, `type`, `cost`, `description`, `rarity`, an `effect` function, and potentially **`usesMomentum` (boolean) and `momentumCost` (number)**.
+    *   **`effect(game, source, target, spentMomentum)`:** A function within each card template that defines the card's logic when played. It receives the game instance (`game`), the entity playing the card (`source`), the target entity (`target`), and the **amount of momentum spent (`spentMomentum`)** by the game loop just before calling the effect (if the card is defined with `usesMomentum` and `momentumCost`). The function modifies the game state accordingly, potentially applying different or additional effects based on `spentMomentum`.
 
 ### Functions
 
