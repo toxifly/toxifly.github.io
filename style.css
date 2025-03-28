@@ -13,7 +13,7 @@ body {
 }
 
 #game-container {
-    width: 800px;
+    width: 1000px;
     max-width: 100%;
     margin: 0 auto;
     position: relative; /* Ensure it's a positioning context for buttons/modals */
@@ -70,7 +70,7 @@ h2 {
     background-size: cover; /* Scale the image to cover the container */
     background-position: center; /* Center the image */
     background-repeat: no-repeat; /* Do not repeat the image */
-    min-height: 120px;
+    min-height: 180px; /* Increased from 120px */
     position: relative; /* Needed for absolute positioning of children if any */
     padding: 10px;
     display: flex; /* Keep using flexbox for internal layout */
@@ -548,6 +548,17 @@ button:disabled {
     color: #55ff55;
 }
 */
+
+/* Container for player hand and next card preview */
+.player-controls-area {
+    display: flex;
+    flex-direction: row; /* Arrange items horizontally */
+    align-items: center; /* Vertically center items */
+    justify-content: center; /* Center items horizontally */
+    gap: 20px; /* Add space between hand and preview */
+    margin-top: 15px;
+    width: 100%; /* Take full width */
+}
 
 /* Container for the next card preview */
 .next-card-container {
