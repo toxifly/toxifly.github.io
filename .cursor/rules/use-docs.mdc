@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Always read [instructions.md](mdc:instructions.md), follow the instructions there if any.
+It includes up to date descriptions of the files structure and all the functions and how they work.
+If you make any changes to the files or folders always update the instructions file - include a short description of the functions and files in the project, enough to understand what it does and how it works.
+If no files are included you should read the instructions file to see which files will be needed for you to execute the task provided.
+When implementing new functionalities always do it in a way that will keep the code easy to read and edit, prefer to create many files and smaller functions, for easier context retrieval.
+Update [readme.md](mdc:readme.md) with basic instructions about how to run it and typical readme file content.

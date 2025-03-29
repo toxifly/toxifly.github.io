@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@games-fun/react": "^0.1.94",
+    "@games-fun/sdk": "^0.1.94"
+  }
+}
