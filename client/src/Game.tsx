@@ -5,6 +5,13 @@ import { useGamesFun } from '@games-fun/react'; // Assuming this is the correct 
 import GameUI from './components/GameUI'; // Import the new GameUI component
 // import RewardScreen from './components/RewardScreen';
 
+// Define game actions
+const GAME_ACTIONS = {
+    AUTO_PLAY_CARD: 'autoPlayCard',
+    END_TURN: 'endTurn',
+    SELECT_REWARD: 'selectReward',
+} as const; // Use 'as const' for stricter typing
+
 const Game: React.FC = () => {
     // Get state and connection status from our game context
     const { gameState, gameConfig, isConnected, error: gameError } = useGame();

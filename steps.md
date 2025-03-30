@@ -3,17 +3,14 @@ Explain how I can validate if it's working.
 
 # Project Steps
 ## Phase 3: Implementing Core Game Loop & Actions
-**Step 23: Define Game Actions Constant (`client/src/Game.tsx`)**
-   - Define `GAME_ACTIONS` object (e.g., `autoPlayCard`, `endTurn`, `selectReward`).
-
-**Step 24: Server: Initial Player State (`server/src/gameManager.ts`)**
+**Step 24: Server: Initial Player State (`server/src/gameManager.ts`)** (Done)
    - Implement logic within `getState` for a *new* player:
      - Initialize `Floor 1`.
      - Create `PlayerState` with starting deck (from config), max HP/Energy.
-     - Generate first `EnemyState` based on Floor 1 config.
+     - Generate first `EnemyState` based on Floor 1 config (used first available enemy).
      - Set `phase: 'fighting'`, `turn: 'player'`.
-     - Draw initial hand/set next card using helper methods (implement stubs first).
-    - *Note:* Added temporary state initialization in `gameManager.ts` to allow `getState` to function for new players. Full initialization logic is still pending in Step 24.
+     - Draw initial hand/set next card using helper methods (implemented stubs first, called `drawCard` once).
+    - *Note:* Logic implemented in `initializeNewGameState`, called by `getState`. Stubs for `drawCard` and `shuffleDeck` added.
 
 **Step 25: Server: Deck Handling Helpers (`server/src/gameManager.ts`)**
    - Implement `drawCard(playerState)`: Draw from `player.deck`, handle empty deck (shuffle discard, add momentum), set `player.nextCard`.

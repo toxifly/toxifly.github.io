@@ -8,8 +8,8 @@ import {
   ActionRequest,
   Buff,
 } from './types';
-// Potentially import config values if needed for default state generation, but GameConfig object is passed in.
-// import { config as gameConfigConstants } from './config';
+// Import the actual config constants now needed for initialization logic
+import { config as gameConfigConstants } from './config';
 
 /**
  * Manages the game state and logic for multiple players.
@@ -20,8 +20,13 @@ export class DefaultGameManager {
 
   constructor(config: GameConfig) {
     this.config = config;
-    // Load card/enemy definitions from config (they are already part of GameConfig)
-    console.log('GameManager initialized with config:', config);
+    // Ensure card/enemy definitions are part of the config passed in
+    if (!config.cards || !config.enemies) {
+      throw new Error(
+        'GameConfig must include card and enemy definitions.'
+      );
+    }
+    console.log('GameManager initialized');
   }
 
   /**
@@ -34,12 +39,12 @@ export class DefaultGameManager {
     let state = this.playerStates.get(playerId);
     if (!state) {
       console.log(`No state found for player ${playerId}, initializing new game.`);
-      // --- TEMPORARY: Initialize with placeholder state for Step 10 ---
+      // --- Remove TEMPORARY state initialization call ---
+      // state = this.initializeNewGameState(playerId); // Old call
+      // --- Implement proper initial state creation (Step 24) ---
       state = this.initializeNewGameState(playerId);
       this.setState(playerId, state);
-      // --- END TEMPORARY ---
-      // TODO: Implement proper initial state creation (Step 24)
-      // throw new Error(`State for player ${playerId} not initialized yet.`); // Removed temporary error
+      // --- End Step 24 Initialization ---
     }
     return state;
   }
@@ -122,19 +127,32 @@ export class DefaultGameManager {
     // TODO: Implement reward generation logic (Step 36)
   }
 
-  // --- TEMPORARY Placeholder for Step 10 ---
+  // --- Start: Updated initializeNewGameState for Step 24 ---
   /**
    * Initializes a brand new game state for a player.
-   * (Placeholder for Step 24 logic)
+   * Implements Step 24 logic.
    * @param playerId The player ID.
    * @returns The initialized GameState.
    */
   private initializeNewGameState(playerId: string): GameState {
-    console.warn(`Using TEMPORARY placeholder state for player ${playerId}`);
-    // This is a minimal placeholder, Step 24 will implement the real logic
-    const initialPlayerState: PlayerState = {
+    console.log(`Initializing new game state for player ${playerId}`);
+
+    // Create Player State
+    const startingDeckIds = gameConfigConstants.PLAYER_STARTING_DECK.map((id) =>
+      id.toLowerCase()
+    ); // Normalize IDs
+
+    // Validate starting deck cards exist
+    startingDeckIds.forEach((cardId) => {
+        if (!this.config.cards[cardId]) {
+            console.error(`ERROR: Starting deck card ID "${cardId}" not found in config.cards!`);
+            // Potentially throw an error or filter out invalid cards
+        }
+    });
+
+    const playerState: PlayerState = {
       id: playerId,
-      name: 'Player',
+      name: 'Player', // Consider making this configurable later
       hp: this.config.PLAYER_MAX_HP,
       maxHp: this.config.PLAYER_MAX_HP,
       block: 0,
@@ -142,51 +160,76 @@ export class DefaultGameManager {
       buffs: [],
       energy: this.config.PLAYER_START_ENERGY,
       maxEnergy: this.config.PLAYER_START_ENERGY,
-      deck: ['strike', 'strike', 'strike', 'defend', 'defend'], // Example deck
+      deck: startingDeckIds, // Use normalized IDs
       hand: [],
       discard: [],
-      nextCard: null,
+      nextCard: null, // Will be set by initial draw
     };
-    const initialEnemyState: EnemyState = { // Placeholder enemy
-      id: 'goblin',
-      name: 'Goblin',
-      hp: 5,
-      maxHp: 5,
+
+    // Create Enemy State for Floor 1
+    // TODO: Implement proper floor-based enemy selection based on config
+    const enemyIds = Object.keys(this.config.enemies);
+    if (enemyIds.length === 0) {
+      throw new Error('No enemies defined in the game config!');
+    }
+    const floor1EnemyId = enemyIds[0]; // Use the first defined enemy for now
+    const enemyDefinition = this.config.enemies[floor1EnemyId];
+
+    const enemyState: EnemyState = {
+      id: enemyDefinition.id,
+      name: enemyDefinition.name,
+      maxHp: enemyDefinition.maxHp,
+      hp: enemyDefinition.maxHp, // Start at full HP
       block: 0,
       momentum: 0,
       buffs: [],
-      maxEnergy: 1,
-      deck: ['attack'],
+      maxEnergy: enemyDefinition.maxEnergy,
+      deck: enemyDefinition.deck.map(id => id.toLowerCase()), // Ensure enemy card IDs are also normalized if needed
+      description: enemyDefinition.description,
     };
-    return {
+
+    // Assemble initial Game State
+    const initialGameState: GameState = {
       floor: 1,
       phase: 'fighting',
       turn: 'player',
-      player: initialPlayerState,
-      enemy: initialEnemyState,
+      player: playerState,
+      enemy: enemyState,
       rewardOptions: [],
       currentRewardSet: 0,
+      // currency can be omitted or initialized to 0
     };
+
+    // Initial setup actions
+    this.shuffleDeck(initialGameState.player); // Shuffle the starting deck
+    this.drawCard(initialGameState.player); // Set the first 'nextCard'
+
+    console.log("Initial game state created:", initialGameState);
+    return initialGameState;
   }
-  // --- END TEMPORARY ---
+  // --- End: Updated initializeNewGameState for Step 24 ---
 
   /**
    * Draws a card for the player, handling deck shuffle.
    * (Placeholder for Step 25 logic)
    * @param playerState The player state to modify.
    */
-  // private drawCard(playerState: PlayerState): void {
-  //   // TODO: Implement Step 25
-  //   console.log('Drawing card...');
-  // }
+  private drawCard(playerState: PlayerState): void {
+    // TODO: Implement Step 25
+    console.log(`Drawing card for player ${playerState.id}... (Stub)`);
+    // Step 25 will handle deck logic, shuffling, and setting nextCard.
+    // For now, as a stub, we can just log or do nothing.
+    // If the deck wasn't empty, Step 25 would move a card ID from deck to nextCard.
+  }
 
   /**
    * Shuffles the player's discard pile into their deck.
    * (Placeholder for Step 25 logic)
    * @param playerState The player state to modify.
    */
-  // private shuffleDeck(playerState: PlayerState): void {
-  //   // TODO: Implement Step 25
-  //   console.log('Shuffling deck...');
-  // }
+  private shuffleDeck(playerState: PlayerState): void {
+    // TODO: Implement Step 25
+    console.log(`Shuffling deck for player ${playerState.id}... (Stub)`);
+    // Step 25 will implement the actual shuffle logic.
+  }
 } 
