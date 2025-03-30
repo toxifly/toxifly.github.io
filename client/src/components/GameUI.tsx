@@ -6,6 +6,7 @@ import CardDisplay from './CardDisplay';
 
 interface GameUIProps {
     gameState: GameState;
+    animatingCardId?: string | null;
 }
 
 const gameUiStyle: React.CSSProperties = {
@@ -53,9 +54,12 @@ const cardLabelStyle: React.CSSProperties = {
 /**
  * Main UI for the fighting phase. Displays player, enemy, current card, and next card.
  */
-const GameUI: React.FC<GameUIProps> = ({ gameState }) => {
+const GameUI: React.FC<GameUIProps> = ({ gameState, animatingCardId }) => {
     const currentCard = gameState.player.hand.length > 0 ? gameState.player.hand[0] : null;
     const nextCard = gameState.player.nextCard;
+
+    // Determine if the next card is the one being played
+    const isNextCardBeingPlayed = !!(nextCard && animatingCardId && nextCard.id === animatingCardId);
 
     return (
         <div style={gameUiStyle}>
@@ -82,7 +86,11 @@ const GameUI: React.FC<GameUIProps> = ({ gameState }) => {
                  <div style={cardSectionStyle}>
                     <span style={cardLabelStyle}>Next Card</span>
                     {nextCard ? (
-                         <CardDisplay card={nextCard} isNextCard={true} />
+                         <CardDisplay
+                             card={nextCard}
+                             isNextCard={true}
+                             isBeingPlayed={isNextCardBeingPlayed}
+                         />
                     ) : (
                         <div style={{ width: '150px', height: '200px', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e9e9e9', borderRadius: '8px' }}>
                             No next card

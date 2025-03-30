@@ -162,19 +162,25 @@ export class DefaultGameManager {
         }
         const cardIndex = action.payload.cardIndex;
         const currentRewardSetIndex = state.currentRewardSet;
+        const currentOptions = state.rewardOptions[currentRewardSetIndex];
 
         if (currentRewardSetIndex >= state.rewardOptions.length) {
             return { success: false, message: `Invalid current reward set index (${currentRewardSetIndex}).` };
         }
 
-        const currentOptions = state.rewardOptions[currentRewardSetIndex];
         const isValidIndex = cardIndex >= -1 && cardIndex < currentOptions.length;
 
         if (!isValidIndex) {
             return { success: false, message: `Invalid card index (${cardIndex}) for current reward options.` };
         }
 
-        console.log(`Action 'selectReward' validated. Player selected index ${cardIndex}.`);
+        // Add null check for currentOptions just in case
+        if (!currentOptions) {
+            console.error(`Error: Could not find reward options for set index ${currentRewardSetIndex}`);
+            return { success: false, message: `Internal server error: Missing reward options for set ${currentRewardSetIndex}.` };
+        }
+
+        console.log(`Action 'selectReward' validated. Player selected index ${cardIndex}. Current Set Index: ${currentRewardSetIndex}`);
 
         // --- Execution ---
         if (cardIndex !== -1) { // Player chose a card (not skipped)
@@ -189,17 +195,21 @@ export class DefaultGameManager {
         // Increment reward set index
         state.currentRewardSet++;
 
+        // --- Add detailed logging before the check ---
+        console.log(`Checking reward completion: currentRewardSet=${state.currentRewardSet}, REWARD_SETS=${gameConfigConstants.REWARD_SETS}, rewardOptions.length=${state.rewardOptions.length}`);
+        // --- End added logging ---
+
         // Check if all reward sets have been processed
         if (state.currentRewardSet >= gameConfigConstants.REWARD_SETS || state.currentRewardSet >= state.rewardOptions.length) {
             console.log(`Finished all reward sets. Transitioning to next fight.`);
             state.rewardOptions = []; // Clear reward options
             state.currentRewardSet = 0; // Reset index
             state.phase = 'fighting';
-            this.startNewFight(state); // Set up the next enemy (Step 38 - currently placeholder)
+            this.startNewFight(state); // Set up the next enemy
             this.drawCard(player); // Draw the first card for the new fight
             console.log(`Phase set to 'fighting'. Next fight setup. First card drawn: ${player.nextCard?.name}`);
         } else {
-            console.log(`Moving to next reward set (${state.currentRewardSet + 1}/${gameConfigConstants.REWARD_SETS}).`);
+            console.log(`Moving to next reward set (${state.currentRewardSet}/${gameConfigConstants.REWARD_SETS}). Target next index: ${state.currentRewardSet}`); // Updated log
         }
 
         // Update State
@@ -487,6 +497,7 @@ export class DefaultGameManager {
   /**
    * Sets up the game state for the start of a new fight (e.g., next floor).
    * Selects an enemy based on the floor number and resets its state.
+   * **Resets the player's deck using their full `allCards` list and shuffles it.**
    * @param gameState The current game state to modify.
    */
   startNewFight(gameState: GameState): void {
@@ -533,10 +544,28 @@ export class DefaultGameManager {
     // Update the game state with the new enemy
     gameState.enemy = newEnemyState;
 
+    // --- Reset Player Deck for New Fight ---
+    const player = gameState.player;
+    console.log(`Resetting player deck for new fight using ${player.allCards.length} cards from allCards.`);
+    player.deck = [...player.allCards]; // Copy the full deck into the draw pile
+    player.discard = []; // Clear the discard pile
+    player.nextCard = null; // Ensure no card is pre-drawn
+
+    // Shuffle the newly reset deck (Fisher-Yates)
+    let currentIndex = player.deck.length;
+    let randomIndex: number;
+    while (currentIndex !== 0) {
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        [player.deck[currentIndex], player.deck[randomIndex]] = [
+        player.deck[randomIndex], player.deck[currentIndex]];
+    }
+    console.log(`Player deck reset and shuffled. Draw pile size: ${player.deck.length}, Discard pile size: ${player.discard.length}`);
+    // --- End Player Deck Reset ---
+
+
     // Ensure player stats are also ready for the fight (some might be reset in checkCombatEnd already)
-    // gameState.player.block = 0; // Usually done after player wins
-    // gameState.player.momentum = 0; // Usually done after player wins
-    // gameState.player.buffs = []; // Usually done after player wins
+    // Note: Block, momentum, and buffs are typically reset in checkCombatEnd when the player wins.
     // Reset player energy to max at the start of a fight? (Optional game design choice)
     // gameState.player.energy = gameState.player.maxEnergy;
 
@@ -621,7 +650,7 @@ export class DefaultGameManager {
     // Validate starting deck cards exist
     startingDeckIds.forEach((cardId) => {
         if (!this.config.cards[cardId]) {
-            console.error(`ERROR: Starting deck card ID "${cardId}" not found in config.cards!`);
+            console.error(`ERROR: Starting deck card ID "${cardId}" not found in config.cards! Check data/cards.ts and config.ts.`);
             // Potentially throw an error or filter out invalid cards
         }
     });
@@ -678,11 +707,13 @@ export class DefaultGameManager {
     };
 
     // Initial setup actions
+    console.log(`Player ${playerId}: Initial deck before shuffle:`, [...initialGameState.player.deck]); // Log deck before shuffle
     this.shuffleDeck(initialGameState.player); // Shuffle the starting deck
+    console.log(`Player ${playerId}: Initial deck after shuffle:`, [...initialGameState.player.deck]); // Log deck after shuffle
     // Do NOT draw the initial card here; it happens on 'startBattle'
     // this.drawCard(initialGameState.player); // <-- REMOVED
 
-    console.log("Initial game state created (pre_battle phase):", initialGameState);
+    console.log("Initial game state created (pre_battle phase)."); // Removed full state log, too verbose
     return initialGameState;
   }
 
@@ -726,31 +757,40 @@ export class DefaultGameManager {
       console.error(`Player ${playerState.id}: Could not find card definition for ID: ${nextCardId}`);
       playerState.nextCard = null; // Set to null if card definition is missing
       // Maybe draw the next one instead? For now, set null.
-      this.drawCard(playerState); // Attempt to draw the *next* card if the current one was invalid
+      // Recursive call removed - could lead to infinite loop if many cards are missing.
+      // Let the next action attempt the draw again if needed.
+      // this.drawCard(playerState); // Attempt to draw the *next* card if the current one was invalid - REMOVED
       return;
     }
 
     // Set the drawn card as the next card
     playerState.nextCard = nextCardDefinition;
-    console.log(`Player ${playerState.id} drew next card: ${nextCardDefinition.name} (ID: ${nextCardId}). Deck size: ${playerState.deck.length}`);
+    console.log(`Player ${playerState.id} drew next card: ${nextCardDefinition.name} (ID: ${nextCardId}). Deck size: ${playerState.deck.length}`); // Ensure this log appears and shows the correct card
   }
 
   /**
    * Shuffles the player's discard pile back into their deck.
-   * Implements Step 25 logic.
+   * If the discard pile is empty, it shuffles the existing deck.
+   * Called when the draw pile (`playerState.deck`) is empty during combat,
+   * OR during initialization to shuffle the starting deck.
    * @param playerState The player state to modify.
    */
   private shuffleDeck(playerState: PlayerState): void {
     if (playerState.discard.length === 0) {
-        console.log(`Player ${playerState.id}: Discard pile is empty, nothing to shuffle.`);
-        return; // Nothing to shuffle
+        // Only log this if the deck isn't also empty (initialization case or error)
+        if (playerState.deck.length > 0) {
+            console.log(`Player ${playerState.id}: Discard pile empty. Shuffling existing draw pile (${playerState.deck.length} cards).`);
+        } else {
+             console.log(`Player ${playerState.id}: Discard pile and deck are empty. Cannot shuffle.`);
+             return; // Cannot shuffle if both are empty
+        }
+    } else {
+        console.log(`Player ${playerState.id}: Shuffling ${playerState.discard.length} cards from discard into deck (current deck size: ${playerState.deck.length}).`);
+        // Move all cards from discard to deck
+        playerState.deck = [...playerState.deck, ...playerState.discard];
+        playerState.discard = []; // Clear the discard pile
     }
 
-    console.log(`Player ${playerState.id}: Shuffling ${playerState.discard.length} cards from discard into deck.`);
-
-    // Move all cards from discard to deck
-    playerState.deck = [...playerState.deck, ...playerState.discard]; // Append discard pile to deck
-    playerState.discard = []; // Clear the discard pile
 
     // Fisher-Yates (Knuth) Shuffle algorithm
     let currentIndex = playerState.deck.length;
@@ -803,10 +843,13 @@ export class DefaultGameManager {
       // --- Start Step 35 Implementation ---
       state.floor++; // Increment floor
       this.generateRewards(state); // Generate rewards (currently a placeholder)
+      // --- Ensure currentRewardSet is set to 0 AFTER generating rewards ---
       state.currentRewardSet = 0; // Start reward selection from the first set
       // --- End Step 35 Implementation ---
       // Note: Future steps will handle rewards; for now, just change phase.
       phaseChanged = true;
+       // Add log to show generated reward options count right after generation
+      console.log(`Generated ${state.rewardOptions.length} reward sets for floor ${state.floor}. Setting currentRewardSet to 0.`);
     }
 
     if (phaseChanged) {

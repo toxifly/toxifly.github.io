@@ -57,7 +57,7 @@ const Game: React.FC = () => {
             animatingCardId !== cardToPlay.id // Ensure we don't re-trigger animation for the same card
         ) {
             console.log("Game Effect: Conditions MET for auto-play. Setting timeout.");
-            setIsPlayerActing(true); // Set flag to prevent re-triggering action itself
+            setIsPlayerActing(true); // Set flag BEFORE timeout
 
             const timer = setTimeout(async () => {
                 // Re-check state inside timeout using the ref for the *latest* state
@@ -85,27 +85,22 @@ const Game: React.FC = () => {
                     console.log("Game Effect: actions.autoPlayCard finished");
                 } catch (err) {
                     console.error('Error auto-playing card:', err);
-                    // If action fails, maybe reset animation immediately?
-                    // setAnimatingCardId(null); // Optional: reset on error
+                    setAnimatingCardId(null);
                 } finally {
-                    // Reset the acting flag after a short delay, allowing state updates
-                    // Note: The state update from the server might reset the turn faster
-                    setTimeout(() => {
-                        console.log("Game Effect: Resetting isPlayerActing flag.");
-                        setIsPlayerActing(false)
-                    }, 100);
-                    // Reset the animation state after the animation duration
+                    console.log("Game Effect: Resetting isPlayerActing flag immediately.");
+                    setIsPlayerActing(false);
                     setTimeout(() => {
                         console.log("Game Effect: Resetting animatingCardId.");
                         setAnimatingCardId(null)
                     }, ANIMATION_DURATION);
                 }
-            }, 500); // Delay before auto-playing
+            }, 500);
 
             return () => {
                 console.log("Game Effect: Cleanup function running.");
                 clearTimeout(timer);
-                // Clean up if effect re-runs before timeout finishes
+                console.log("Game Effect: Resetting isPlayerActing flag in cleanup.");
+                setIsPlayerActing(false);
             };
         } else {
              // Add log for why conditions were NOT met
@@ -132,7 +127,7 @@ const Game: React.FC = () => {
         }
         // *** Removed the misplaced useRef and useEffect from here ***
 
-    }, [gameState, actions, isPlayerActing, animatingCardId]); // Keep dependencies as they were
+    }, [gameState, actions, animatingCardId]); // Corrected dependency array
 
     // --- Loading and Connection Status ---
     if (isInitializing) {

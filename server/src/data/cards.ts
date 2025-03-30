@@ -20,4 +20,23 @@ export const cards: Record<string, CardDefinition> = {
     ],
   },
   // Add more cards here
+  bash: {
+    id: 'bash',
+    name: 'Bash',
+    cost: 2,
+    description: 'Deal 8 damage. Gain 3 Block.',
+    effects: [
+      { type: 'damage', value: 8 },
+      { type: 'block', value: 3 },
+    ],
+  },
+  quick_slash: {
+    id: 'quick_slash',
+    name: 'Quick Slash',
+    cost: 0,
+    description: 'Deal 3 damage.',
+    effects: [
+      { type: 'damage', value: 3 },
+    ],
+  },
 }; 

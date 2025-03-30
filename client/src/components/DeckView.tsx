@@ -31,19 +31,18 @@ const DeckView: React.FC<DeckViewProps> = ({ deck, gameConfig, onClose }) => {
                 <h2 className={styles.title}>Your Deck ({deck.length} cards)</h2>
                 <div className={styles.cardGrid}>
                     {deck.length > 0 ? (
-                        deck.map((cardId) => {
+                        deck.map((cardId, index) => {
                             const cardDef = gameConfig.cards[cardId];
                             if (!cardDef) {
                                 console.warn(`Card definition not found for ID: ${cardId}`);
                                 return (
-                                    <div key={cardId} className={styles.cardWrapper}>
+                                    <div key={`${cardId}-${index}-error`} className={styles.cardWrapper}>
                                         <div className={styles.loadingOrError}>Unknown Card ({cardId})</div>
                                     </div>
                                 );
                             }
                             return (
-                                <div key={cardId} className={styles.cardWrapper}>
-                                    {/* Pass isNextCard and isBeingPlayed as false or undefined */}
+                                <div key={`${cardId}-${index}`} className={styles.cardWrapper}>
                                     <CardDisplay card={cardDef} isNextCard={false} isBeingPlayed={false} />
                                 </div>
                             );

@@ -10,7 +10,7 @@ import { config as gameConfigConstants } from './config';
 import { cards } from './data/cards';
 import { enemies } from './data/enemies';
 import { buffs } from './data/buffs';
-import { GameConfig, GameState, ActionRequest } from './types'; // Added GameState, ActionRequest
+import { GameConfig, GameState, ActionRequest, CardDefinition } from './types';
 
 // Create an Express application
 const app = express();
@@ -55,10 +55,40 @@ interface GetStateParams {
   playerId: string;
 }
 
-interface ValidateActionBody {
-  playerId?: string;
-  action?: ActionRequest;
+// Define an interface for the actual body structure sent by GamesFun SDK
+interface GamesFunActionRequestBody {
+  actionName?: string;
+  params?: {
+    privyId?: string;
+    // Include other params if needed, e.g., walletAddress
+  };
+  // Include other top-level fields if needed, e.g., gameId, requestId
 }
+
+// --- Helper Type & Function for Validation ---
+// Define the union type for valid action names directly from ActionRequest
+type ValidActionType = ActionRequest['type'];
+
+// Create a Set of valid action types for efficient checking
+const validActionTypes = new Set<ValidActionType>([
+  'autoPlayCard',
+  'selectReward',
+  'endTurn',
+  'newGame',
+  'startBattle'
+]);
+
+// Type guard function to check if a string is a valid action type
+function isValidActionType(type: string): type is ValidActionType {
+  return validActionTypes.has(type as ValidActionType);
+}
+
+// Interface for selectReward payload extraction from params
+interface SelectRewardParams {
+    cardIndex?: number | string; // Allow string temporarily for parsing
+    // Add other potential params here if needed by other actions
+}
+// --- End Helper ---
 
 // Basic route for testing
 app.get('/', (req, res) => {
@@ -94,18 +124,75 @@ app.get('/api/state/:playerId', function(req, res) {
 } as RequestHandler<GetStateParams>);
 
 // POST /api/validate-action - Validates player actions and broadcasts state updates
-// Use type casting to specify the handler type
 app.post('/api/validate-action', async function(req, res) {
-  const { playerId, action } = req.body as ValidateActionBody;
+  console.log('Received /api/validate-action request');
+  console.log('Actual Request Body:', req.body);
 
-  if (!playerId || !action) {
-    return res.status(400).json({ error: "playerId and action are required in the request body" });
+  // --- Updated Extraction Logic ---
+  const body = req.body as GamesFunActionRequestBody;
+  const playerId = body.params?.privyId;
+  const actionName = body.actionName; // Still a string here
+
+  // --- Refined Payload Extraction ---
+  let action: ActionRequest | undefined = undefined;
+  let payload: any = {}; // Initialize payload
+
+  if (actionName && isValidActionType(actionName)) {
+    // Action name is valid, now construct payload based on type
+    const actionParams = body.params as any; // Cast params for easier access (use specific interfaces if preferred)
+
+    switch (actionName) {
+      case 'selectReward':
+        const rawCardIndex = actionParams?.cardIndex;
+        if (rawCardIndex !== undefined && !isNaN(Number(rawCardIndex))) {
+            payload = { cardIndex: Number(rawCardIndex) };
+            console.log(`Extracted payload for 'selectReward':`, payload);
+        } else {
+            console.error(`Validation Error: Missing or invalid cardIndex for action 'selectReward'. Received:`, rawCardIndex, { body });
+            return res.status(400).json({ error: `Missing or invalid cardIndex number for action 'selectReward'.` });
+        }
+        break;
+      // Add cases for other actions needing specific payloads in body.params
+      // case 'someOtherAction':
+      //   const someData = actionParams?.someData;
+      //   if (someData) {
+      //     payload = { someData: someData };
+      //   } else {
+      //      return res.status(400).json({ error: `Missing someData for action 'someOtherAction'.` });
+      //   }
+      //   break;
+      default:
+        // For actions like 'startBattle', 'autoPlayCard', 'endTurn', 'newGame'
+        // where no specific payload is expected from body.params by gameManager.
+        payload = {}; // Empty payload is sufficient
+        break;
+    }
+    action = { type: actionName, payload: payload };
+
+  } else if (actionName) {
+      // actionName was provided, but it's not a valid one
+      console.error(`Validation Error: Invalid actionName '${actionName}' received.`, { body });
+      return res.status(400).json({ error: `Invalid actionName: ${actionName}` });
   }
+  // --- End Payload Extraction ---
 
-  console.log(`Received action validation request for player ${playerId}:`, action);
+
+  // --- Use Extracted Values for Validation ---
+  if (!playerId) {
+    console.error('Validation Error: Missing params.privyId (playerId) in request body.', { body });
+    return res.status(400).json({ error: "playerId (in params.privyId) is required in the request body" });
+  }
+  // Check if action is still undefined (meaning actionName was missing or invalid)
+  if (!action) { // This covers the case where actionName was missing OR invalidActionType was hit earlier
+    console.error('Validation Error: Missing or invalid actionName in request body.', { body });
+    return res.status(400).json({ error: "A valid actionName is required in the request body" });
+  }
+  // --- End Validation Update ---
+
+  console.log(`Processing action validation for player ${playerId}:`, action); // Log includes payload now
 
   try {
-    // Call the actual game manager validation and AWAIT the result
+    // Call the game manager - it now receives a correctly typed action with payload
     const validationResult = await gameManager.validateAction(playerId, action);
 
     // If the action was successful, potentially run enemy turn and broadcast
@@ -117,24 +204,29 @@ app.post('/api/validate-action', async function(req, res) {
       let finalStateToBroadcast = stateAfterPlayerAction;
 
       // Check if the player's action ended their turn
-      if (stateAfterPlayerAction.turn === 'enemy') {
+      if (stateAfterPlayerAction.turn === 'enemy' && stateAfterPlayerAction.phase === 'fighting') { // Check phase too
         console.log(`Player ${playerId}'s action resulted in enemy turn. Running enemy turn...`);
-        // Run the enemy turn logic, which modifies the state object directly
-        gameManager.runEnemyTurn(stateAfterPlayerAction);
-        // The state object is now updated with the results of the enemy turn
-        // finalStateToBroadcast already references the modified state object
+
+        // REMOVED redundant call to applyStartOfTurnBuffs for enemy.
+        // gameManager.applyStartOfTurnBuffs(stateAfterPlayerAction.enemy);
+
+        // Run the enemy turn logic. It handles its own start/end turn buffs.
+        gameManager.runEnemyTurn(stateAfterPlayerAction); // Modifies stateAfterPlayerAction directly
+
+        // stateAfterPlayerAction now reflects the state *after* the enemy turn
+        // finalStateToBroadcast automatically references this updated state.
         console.log(`Enemy turn completed for player ${playerId}. New turn: ${finalStateToBroadcast.turn}, Phase: ${finalStateToBroadcast.phase}`);
 
-        // Check if turn switched back to player after enemy turn
+        // Check if turn switched back to player *after* enemy turn completed
         if (finalStateToBroadcast.turn === 'player' && finalStateToBroadcast.phase === 'fighting') {
             console.log(`Turn switched back to player ${playerId}. Applying player start-of-turn buffs.`);
-            gameManager.applyStartOfTurnBuffs(finalStateToBroadcast.player);
-            // NOTE: No need to get state again, applyStartOfTurnBuffs modifies the object
+            gameManager.applyStartOfTurnBuffs(finalStateToBroadcast.player); // Apply player start-of-turn buffs NOW
+            // State is modified directly by applyStartOfTurnBuffs
         }
       }
       // --- End Step 33 ---
 
-      // Broadcast the final state (either after player action or after enemy turn)
+      // Broadcast the final state (potentially modified by enemy turn and/or player start buffs)
       const ws = activeConnections.get(playerId);
       if (ws && ws.readyState === WebSocket.OPEN) {
         const stateUpdateMessage = {
@@ -146,7 +238,7 @@ app.post('/api/validate-action', async function(req, res) {
         ws.send(JSON.stringify(stateUpdateMessage));
         console.log(`Sent state_update to player ${playerId} (Turn: ${finalStateToBroadcast.turn}, Phase: ${finalStateToBroadcast.phase})`);
       } else {
-        console.warn(`WebSocket not found or not open for player ${playerId} after action/enemy turn.`);
+        console.warn(`WebSocket not found or not open for player ${playerId} after action/turn processing.`);
       }
     }
 
