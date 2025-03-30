@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect, useRef } from 'react';
 import { useGamesFun } from '@games-fun/react'; // Assuming this is the correct import path
 import type { GameState, GameConfig } from '../../../server/src/types';
 
@@ -26,6 +26,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const [isConnected, setIsConnected] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [ws, setWs] = useState<WebSocket | null>(null);
+    const updateStateTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref to hold pending state update timeout
 
     // Get connection info from GamesFun SDK
     const { connection, isInitializing } = useGamesFun(); // Added isInitializing for better checks
@@ -61,6 +62,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         };
 
         socket.onmessage = (event) => {
+            // Clear any pending state update timeout when a new message arrives
+            if (updateStateTimeoutRef.current) {
+                clearTimeout(updateStateTimeoutRef.current);
+                updateStateTimeoutRef.current = null;
+            }
+
             try {
                 const message = JSON.parse(event.data);
                 console.log('WebSocket: Message received:', message);
@@ -68,6 +75,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                 switch (message.type) {
                     case 'init':
                         if (message.payload?.gameState && message.payload?.gameConfig) {
+                            // Apply initial state immediately
                             setGameState(message.payload.gameState);
                             setGameConfig(message.payload.gameConfig);
                             setError(null); // Clear errors on successful init
@@ -79,8 +87,28 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                         break;
                     case 'state_update':
                         if (message.payload?.gameState) {
-                            setGameState(message.payload.gameState);
-                            console.log('WebSocket: Game state updated.');
+                            const incomingGameState: GameState = message.payload.gameState;
+                            const currentTurn = gameState?.turn; // Get current turn *before* update
+                            const incomingTurn = incomingGameState.turn;
+                            const turnChanged = currentTurn && currentTurn !== incomingTurn;
+
+                            console.log(`GameContext: Received state_update. Current Turn: ${currentTurn}, Incoming Turn: ${incomingTurn}. Turn Changed: ${turnChanged}`);
+
+                            const updateAction = () => {
+                                console.log('GameContext: Applying state update.');
+                                setGameState(incomingGameState);
+                                console.log('GameContext: Called setGameState with updated state.');
+                                updateStateTimeoutRef.current = null; // Clear ref after execution
+                            };
+
+                            if (turnChanged) {
+                                console.log('GameContext: Turn changed, applying delay before state update.');
+                                // Delay the state update if the turn has changed
+                                updateStateTimeoutRef.current = setTimeout(updateAction, 1000); // 1 second delay
+                            } else {
+                                // Apply state update immediately if turn didn't change
+                                updateAction();
+                            }
                         } else {
                              console.error('WebSocket: Invalid "state_update" message payload:', message.payload);
                              setError('Received invalid state update from server.');
@@ -108,6 +136,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                  setError('WebSocket connection closed unexpectedly.');
             }
             // Consider adding automatic reconnection logic here if desired
+             // Clear any pending timeout on close
+            if (updateStateTimeoutRef.current) {
+                clearTimeout(updateStateTimeoutRef.current);
+                updateStateTimeoutRef.current = null;
+            }
         };
 
         socket.onerror = (errorEvent) => {
@@ -128,9 +161,14 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             // Optionally clear game state on disconnect? Depends on requirements.
             // setGameState(null);
             // setGameConfig(null);
+             // Clear any pending timeout on unmount/reconnect
+            if (updateStateTimeoutRef.current) {
+                clearTimeout(updateStateTimeoutRef.current);
+                updateStateTimeoutRef.current = null;
+            }
         };
     // Depend on privyId and isInitializing to re-run when connection details change
-    }, [connection?.privyId, isInitializing]);
+    }, [connection?.privyId, isInitializing, gameState?.turn]); // <-- Add gameState.turn as dependency to access latest turn in handler
 
     // Updated sendMessage function using the state 'ws'
     const sendMessage = useCallback((message: any) => {

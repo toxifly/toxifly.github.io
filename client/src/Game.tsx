@@ -6,7 +6,7 @@ import GameUI from './components/GameUI'; // Import the new GameUI component
 import RewardScreen from './components/RewardScreen'; // Import RewardScreen
 import ActionPanel from './components/ActionPanel'; // Import ActionPanel
 import DeckView from './components/DeckView'; // Import DeckView
-import type { GameState } from '../../server/src/types'; // Import GameState type (Corrected path)
+import type { GameState, CardDefinition, GameConfig } from '../../server/src/types'; // Import GameState, CardDefinition, and GameConfig types
 
 // Define game actions - Ensure keys match expected function names from the hook
 // Add 'startBattle' here
@@ -25,109 +25,151 @@ const Game: React.FC = () => {
     // Get actions hook to trigger game actions
     const actions = useGamesFunActions(GAME_ACTIONS);
 
-    // Local state to prevent triggering auto-play multiple times rapidly
-    const [isPlayerActing, setIsPlayerActing] = useState(false);
+    // --- START Step 1 Logging ---
+    // console.log(`Game component re-rendered. Phase: ${gameState?.phase}, Turn: ${gameState?.turn}`); // Less noisy now
+    // --- END Step 1 Logging ---
+
     // State to track which card is currently being animated
     const [animatingCardId, setAnimatingCardId] = useState<string | null>(null);
-    const ANIMATION_DURATION = 500; // ms, match CSS animation duration
 
     // State for DeckView visibility
     const [isDeckVisible, setIsDeckVisible] = useState(false);
 
-    // *** Moved useRef and its useEffect to the top level ***
     // Ref to hold the latest gameState for use in setTimeout callbacks
     const gameStateRef = useRef<GameState | null>(gameState);
+    // Use ReturnType<typeof setTimeout> for portability instead of NodeJS.Timeout
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => {
        gameStateRef.current = gameState;
     }, [gameState]);
 
-    // Effect to automatically play the next card when it's the player's turn
+    // Effect for automatic card play
     useEffect(() => {
-        // Use gameStateRef.current for checks if needed, but direct gameState is usually fine for the initial check
-        console.log("Game Effect Triggered: Turn:", gameState?.turn, "Next Card:", gameState?.player?.nextCard?.id, "Is Acting:", isPlayerActing, "Animating:", animatingCardId);
+        // Cleanup function: Clears any pending timeout
+        const cleanupTimeout = () => {
+            if (timeoutRef.current) {
+                console.log(`Game Effect Cleanup: Clearing previous timeout (ID: ${timeoutRef.current}).`);
+                clearTimeout(timeoutRef.current);
+                timeoutRef.current = null;
+                // DO NOT reset isPlayerActingRef here. Let the finally/abort logic handle it.
+            }
+        };
 
-        // Store nextCard from the current render's gameState
-        const cardToPlay = gameState?.player?.nextCard;
+        // Log current state relevant to the effect's decision
+        console.log(`Game Effect Triggered: Phase: ${gameState?.phase} Turn: ${gameState?.turn} Next Card ID: ${gameState?.player?.nextCard} Energy: ${gameState?.player?.energy}`);
 
-        if (
-            gameState &&
-            gameState.turn === 'player' &&
-            cardToPlay && // Check if there's a card to play
-            !isPlayerActing && // Check if we are not already acting
-            animatingCardId !== cardToPlay.id // Ensure we don't re-trigger animation for the same card
-        ) {
-            console.log("Game Effect: Conditions MET for auto-play. Setting timeout.");
-            setIsPlayerActing(true); // Set flag BEFORE timeout
+        // Initial checks for necessary data
+        if (!gameState || !gameConfig || !actions) {
+            console.log("Game Effect: Skipping - Initializing or missing context.");
+            // Ensure any previous timeout is cleared if context becomes unavailable mid-operation
+            return cleanupTimeout;
+        }
 
-            const timer = setTimeout(async () => {
-                // Re-check state inside timeout using the ref for the *latest* state
-                const currentCardIdInTimeout = gameStateRef.current?.player?.nextCard?.id;
-                // Make sure cardToPlay still exists before accessing id
-                const cardToPlayId = cardToPlay?.id;
-                console.log(`Game Effect: Timeout fired. Card to play ID (initial): ${cardToPlayId}, Card ID now: ${currentCardIdInTimeout}`);
+        const { phase, turn, player } = gameState;
+        const nextCardId = player?.nextCard; // This is the ID (string)
 
-                // Ensure the card intended to be played is still the next card
-                // Check both currentCardIdInTimeout and cardToPlayId exist before comparing
-                if (!cardToPlayId || !currentCardIdInTimeout || currentCardIdInTimeout !== cardToPlayId) {
-                    console.log("Game Effect: Card changed or disappeared before action could be sent. Aborting auto-play.");
-                    setIsPlayerActing(false);
-                    setAnimatingCardId(null); // Reset animation if card changed
-                    return;
-                }
+        // Define conditions for auto-play
+        const isFightingPhase = phase === 'fighting';
+        const isPlayerTurn = turn === 'player';
+        const hasNextCard = typeof nextCardId === 'string';
 
-                console.log('Auto-playing card:', cardToPlayId);
-                // Trigger animation *before* sending the action
-                setAnimatingCardId(cardToPlayId);
+        // Primary condition check: Should we attempt to play?
+        if (isFightingPhase && isPlayerTurn && hasNextCard) {
+            const cardDefinition = gameConfig.cards[nextCardId];
 
-                try {
-                    console.log("Game Effect: Calling actions.autoPlayCard");
-                    await actions.autoPlayCard({}); // Call the action
-                    console.log("Game Effect: actions.autoPlayCard finished");
-                } catch (err) {
-                    console.error('Error auto-playing card:', err);
-                    setAnimatingCardId(null);
-                } finally {
-                    console.log("Game Effect: Resetting isPlayerActing flag immediately.");
-                    setIsPlayerActing(false);
-                    setTimeout(() => {
-                        console.log("Game Effect: Resetting animatingCardId.");
-                        setAnimatingCardId(null)
-                    }, ANIMATION_DURATION);
-                }
-            }, 500);
+            if (!cardDefinition) {
+                console.error(`Game Effect Error: Card definition not found for ID: ${nextCardId}`);
+                return cleanupTimeout; // Return cleanup function
+            }
 
-            return () => {
-                console.log("Game Effect: Cleanup function running.");
-                clearTimeout(timer);
-                console.log("Game Effect: Resetting isPlayerActing flag in cleanup.");
-                setIsPlayerActing(false);
-            };
+            if (player.energy >= cardDefinition.cost) {
+                console.log(`Game Effect: Conditions MET for auto-play (Card: ${cardDefinition.name} [${nextCardId}], Energy: ${player.energy}/${cardDefinition.cost}). Setting timeout.`);
+
+                // Set animation state (this is okay as useState)
+                console.log(`  Setting animatingCardId = ${nextCardId}`);
+                setAnimatingCardId(nextCardId); // Start animation
+
+                // Clear any potentially existing timeout before setting a new one
+                cleanupTimeout();
+
+                // --- Schedule the action ---
+                const newTimeoutId = setTimeout(async () => {
+                    // Capture for logging and comparison before nulling ref
+                    const currentTimeoutId = newTimeoutId;
+                    // Re-check conditions using the latest state from the ref inside the timeout
+                    const currentState = gameStateRef.current;
+                    const intendedCardId = nextCardId; // Use the card ID captured when the timeout was set
+
+                    console.log(`Timeout Fired (ID: ${currentTimeoutId}): Checking conditions again. Ref Phase: ${currentState?.phase}, Ref Turn: ${currentState?.turn}, Ref Next Card: ${currentState?.player?.nextCard}, Intended Card: ${intendedCardId}`);
+
+                    if (
+                        currentState?.phase === 'fighting' &&
+                        currentState?.turn === 'player' &&
+                        currentState?.player?.nextCard === intendedCardId && // Ensure it's still the expected card
+                        currentState.player.energy >= cardDefinition.cost   // Ensure energy is still sufficient
+                    ) {
+                        console.log(`Timeout Action (ID: ${currentTimeoutId}): Conditions still valid. Calling autoPlayCard for ${intendedCardId}`);
+                        try {
+                            await actions.autoPlayCard({});
+                            console.log(`Timeout Action (ID: ${currentTimeoutId}): autoPlayCard action called for ${intendedCardId}.`);
+                        } catch (error) {
+                            console.error(`Timeout Action (ID: ${currentTimeoutId}): Error calling autoPlayCard action for ${intendedCardId}:`, error);
+                        } finally {
+                            console.log(`Timeout Finally (ID: ${currentTimeoutId}): Resetting animatingCardId=null for action related to ${intendedCardId}`);
+                            setAnimatingCardId(null);
+                            // Only nullify timeoutRef if it still holds the ID of *this* timeout,
+                            // preventing race conditions if cleanup ran for a newer effect invocation.
+                            if (timeoutRef.current === currentTimeoutId) {
+                                timeoutRef.current = null; // Mark timeout as completed
+                            }
+                        }
+                    } else {
+                        console.log(`Timeout Aborted (ID: ${currentTimeoutId}): Conditions NO LONGER MET or changed for ${intendedCardId}. Resetting state.`);
+                        console.log(`  - Ref Phase: ${currentState?.phase} (Expected: fighting)`);
+                        console.log(`  - Ref Turn: ${currentState?.turn} (Expected: player)`);
+                        console.log(`  - Ref Next Card: ${currentState?.player?.nextCard} (Expected: ${intendedCardId})`);
+                        console.log(`  - Ref Energy: ${currentState?.player?.energy} (Required: ${cardDefinition.cost})`);
+
+                        // Reset animation state
+                        setAnimatingCardId(null);
+                        if (timeoutRef.current === currentTimeoutId) {
+                            timeoutRef.current = null; // Mark timeout as completed (or aborted)
+                        }
+                    }
+                }, 1200); // 1.2 second delay
+
+                timeoutRef.current = newTimeoutId; // Store the new timeout ID
+                console.log(`Game Effect: Scheduled timeout ID: ${timeoutRef.current} for card ${nextCardId}`);
+
+            } else {
+                // Conditions met except for energy
+                console.log(`Game Effect: Conditions NOT MET for auto-play. Insufficient energy (Have: ${player.energy}, Need: ${cardDefinition.cost}) for card ${cardDefinition.name} (${nextCardId})`);
+                // Don't reset acting flag here, just don't start the action.
+                // Stop animation if energy becomes insufficient for the card we thought we were playing
+                if (animatingCardId === nextCardId) setAnimatingCardId(null);
+            }
         } else {
-             // Add log for why conditions were NOT met
-             console.log("Game Effect: Conditions NOT MET for auto-play.");
-             if (!gameState) console.log("  - Reason: Game state not loaded yet");
-             else { // Only check these if gameState exists
-                 if (gameState.turn !== 'player') console.log("  - Reason: Not player's turn");
-                 if (!cardToPlay) console.log("  - Reason: No card to play");
-                 if (isPlayerActing) console.log("  - Reason: Already acting");
-                 if (cardToPlay && animatingCardId === cardToPlay.id) console.log("  - Reason: Card already animating");
-             }
+            // Log reasons why auto-play didn't trigger
+            console.log(`Game Effect: Conditions NOT MET or Skipping auto-play.`);
+            if (!isFightingPhase) console.log(`  - Reason: Not in 'fighting' phase (Phase: ${phase})`);
+            if (!isPlayerTurn) console.log(`  - Reason: Not player's turn (Turn: ${turn})`);
+            if (!hasNextCard) console.log(`  - Reason: No next card ID (ID: ${nextCardId})`);
+
+            // Reset animation if conditions (like phase/turn/card) are no longer met
+            if (animatingCardId && animatingCardId === nextCardId) {
+                 // This case might occur if the card changes while we're not animating/acting. Stop animation.
+                 setAnimatingCardId(null);
+            } else if (animatingCardId && !hasNextCard) {
+                // If the card we were animating disappears (e.g., played successfully and nextCard is now null/different)
+                // The finally block in timeout should handle this, but as a fallback:
+                 setAnimatingCardId(null);
+            }
         }
 
-        // This part handles resetting if turn changes *while* acting flag is true
-        if (gameState?.turn !== 'player' && isPlayerActing) {
-            console.log("Game Effect: Turn changed, resetting isPlayerActing flag.");
-            // Reset the acting flag if it's not the player's turn anymore
-            setIsPlayerActing(false);
-        }
-        // Reset animation if the card changes unexpectedly or turn ends
-        if (animatingCardId && gameState?.player?.nextCard?.id !== animatingCardId) {
-             console.log("Game Effect: Next card changed or disappeared, resetting animatingCardId.");
-            setAnimatingCardId(null);
-        }
-        // *** Removed the misplaced useRef and useEffect from here ***
-
-    }, [gameState, actions, animatingCardId]); // Corrected dependency array
+        // Return the cleanup function to be called if dependencies change OR component unmounts
+        return cleanupTimeout;
+    // Dependencies remain the same
+    }, [gameState, gameConfig, actions]);
 
     // --- Loading and Connection Status ---
     if (isInitializing) {
@@ -161,7 +203,7 @@ const Game: React.FC = () => {
         switch (gameState?.phase) { // Use optional chaining for gameState here too
             case 'pre_battle':
                 // Render the main UI, but action buttons (like Start Battle) will be added separately
-                // animatingCardId will be null here, so no card animation
+                // Pass animatingCardId (will be null here)
                 return <GameUI gameState={gameState!} animatingCardId={animatingCardId} />;
             case 'fighting':
                 // Pass animatingCardId down to GameUI

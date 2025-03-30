@@ -62,11 +62,12 @@ export interface CombatantState {
 export interface PlayerState extends CombatantState {
   energy: number;
   maxEnergy: number;
-  deck: string[]; // Card IDs
-  hand: CardDefinition[]; // Current cards in hand
-  discard: string[]; // Card IDs
-  nextCard: CardDefinition | null; // The next card to be played automatically
-  allCards: string[]; // All card IDs owned by the player in this run
+  deck: string[]; // Array of card IDs
+  hand: CardDefinition[]; // Currently unused in auto-play model
+  discard: string[]; // Array of card IDs
+  nextCard: string | null; // <<< CHANGED: Should store the ID of the next card, not the full definition
+  allCards: string[]; // All card IDs owned by the player
+  // id and name inherited from CombatantState
 }
 
 /**
@@ -95,9 +96,10 @@ export interface GameState {
   turn: 'player' | 'enemy';
   player: PlayerState;
   enemy: EnemyState;
-  rewardOptions: CardDefinition[][]; // Array of reward sets, each set is an array of cards
+  rewardOptions: CardDefinition[][]; // Array of arrays of card *definitions* for reward choices
   currentRewardSet: number;
   currency: number;
+  lastEnemyCardPlayedId: string | null; // ID of the last card the enemy played
 }
 
 /**
@@ -122,13 +124,12 @@ export interface GameConfig {
  * Represents an action requested by the client to the server.
  * Uses a discriminated union based on the 'type' property.
  */
-export type ActionRequest =
-  | { type: 'autoPlayCard'; payload: {} } // Payload might be empty if auto-playing the first card
-  | { type: 'selectReward'; payload: { cardIndex: number } } // Index of the chosen card in the current reward set, or -1 to skip
-  | { type: 'endTurn'; payload: {} } // Optional: If manual turn ending is implemented
-  | { type: 'newGame'; payload: {} } // Optional: To start a new game after game over
-  | { type: 'startBattle'; payload: {} }; // Added for starting the first battle
-// Add other action types as needed
+export interface ActionRequest {
+  type: 'autoPlayCard' | 'selectReward' | 'startBattle' | 'newGame'; // Add other valid action types
+  payload?: any; // Define specific payload types for each action later if needed
+  // Example specific payload types:
+  // payload: ActionPayloads[T]; // Where T extends ActionRequest['type']
+}
 
 /**
  * Represents game actions the player can take.

@@ -73,7 +73,6 @@ type ValidActionType = ActionRequest['type'];
 const validActionTypes = new Set<ValidActionType>([
   'autoPlayCard',
   'selectReward',
-  'endTurn',
   'newGame',
   'startBattle'
 ]);
@@ -162,7 +161,7 @@ app.post('/api/validate-action', async function(req, res) {
       //   }
       //   break;
       default:
-        // For actions like 'startBattle', 'autoPlayCard', 'endTurn', 'newGame'
+        // For actions like 'startBattle', 'autoPlayCard', 'newGame'
         // where no specific payload is expected from body.params by gameManager.
         payload = {}; // Empty payload is sufficient
         break;
@@ -196,7 +195,7 @@ app.post('/api/validate-action', async function(req, res) {
     const validationResult = await gameManager.validateAction(playerId, action);
 
     // If the action was successful, potentially run enemy turn and broadcast
-    if (validationResult.success) {
+    if (validationResult.success && validationResult.message !== "Game Over") { // Don't run enemy turn if game over
       // Get the state *after* the player's action has been applied
       let stateAfterPlayerAction = gameManager.getState(playerId);
 
@@ -205,28 +204,34 @@ app.post('/api/validate-action', async function(req, res) {
 
       // Check if the player's action ended their turn
       if (stateAfterPlayerAction.turn === 'enemy' && stateAfterPlayerAction.phase === 'fighting') { // Check phase too
-        console.log(`Player ${playerId}'s action resulted in enemy turn. Running enemy turn...`);
-
-        // REMOVED redundant call to applyStartOfTurnBuffs for enemy.
-        // gameManager.applyStartOfTurnBuffs(stateAfterPlayerAction.enemy);
+        console.log(`>>> Player ${playerId}'s action resulted in enemy turn. STARTING enemy turn processing...`);
 
         // Run the enemy turn logic. It handles its own start/end turn buffs.
+        console.log(`>>> Calling gameManager.runEnemyTurn for player ${playerId}'s game...`);
         gameManager.runEnemyTurn(stateAfterPlayerAction); // Modifies stateAfterPlayerAction directly
+        console.log(`>>> Completed gameManager.runEnemyTurn for player ${playerId}'s game.`);
 
         // stateAfterPlayerAction now reflects the state *after* the enemy turn
-        // finalStateToBroadcast automatically references this updated state.
-        console.log(`Enemy turn completed for player ${playerId}. New turn: ${finalStateToBroadcast.turn}, Phase: ${finalStateToBroadcast.phase}`);
+        console.log(`>>> Enemy turn processing completed for player ${playerId}. Post-Enemy Turn State => Turn: ${finalStateToBroadcast.turn}, Phase: ${finalStateToBroadcast.phase}`);
 
         // Check if turn switched back to player *after* enemy turn completed
         if (finalStateToBroadcast.turn === 'player' && finalStateToBroadcast.phase === 'fighting') {
-            console.log(`Turn switched back to player ${playerId}. Applying player start-of-turn buffs.`);
+            console.log(`>>> Turn switched back to player ${playerId}. Resetting energy, applying start-of-turn buffs, and clearing last enemy card.`);
+            // *** Clear the enemy card ID before broadcasting player turn state ***
+            finalStateToBroadcast.lastEnemyCardPlayedId = null;
+            // --- Reset Player Energy ---
+            finalStateToBroadcast.player.energy = finalStateToBroadcast.player.maxEnergy;
+            console.log(`>>> Player ${playerId} energy reset to ${finalStateToBroadcast.player.energy}`);
+            // --- Apply Player Start-of-Turn Buffs ---
             gameManager.applyStartOfTurnBuffs(finalStateToBroadcast.player); // Apply player start-of-turn buffs NOW
-            // State is modified directly by applyStartOfTurnBuffs
+            console.log(`>>> Player start-of-turn buffs applied.`);
+            // --- Save state after energy reset and buffs ---
+            gameManager.setState(playerId, finalStateToBroadcast); // Ensure state is saved before broadcasting
         }
       }
       // --- End Step 33 ---
 
-      // Broadcast the final state (potentially modified by enemy turn and/or player start buffs)
+      // Broadcast the final state (potentially modified by enemy turn and/or player start buffs/energy reset)
       const ws = activeConnections.get(playerId);
       if (ws && ws.readyState === WebSocket.OPEN) {
         const stateUpdateMessage = {
@@ -240,6 +245,18 @@ app.post('/api/validate-action', async function(req, res) {
       } else {
         console.warn(`WebSocket not found or not open for player ${playerId} after action/turn processing.`);
       }
+    } else if (validationResult.success && validationResult.message === "Game Over") {
+        // Handle Game Over: broadcast final state if needed
+        const finalState = gameManager.getState(playerId);
+        const ws = activeConnections.get(playerId);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            const stateUpdateMessage = {
+                type: 'state_update', // Could be a specific 'gameOver' type
+                payload: { gameState: finalState },
+            };
+            ws.send(JSON.stringify(stateUpdateMessage));
+            console.log(`Sent final state_update (Game Over) to player ${playerId}`);
+        }
     }
 
     // Send the validation result back via HTTP (this doesn't need the game state)

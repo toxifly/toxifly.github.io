@@ -26,6 +26,11 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
     .filter(Boolean) // Remove empty strings
     .join(' '); // Join into a single string
 
+  console.log(`[CardDisplay] Rendering card: ${card.id}. isNextCard: ${isNextCard}, isBeingPlayed: ${isBeingPlayed}`);
+  if (isBeingPlayed) {
+      console.log(`[CardDisplay] Applying 'playing' class to card: ${card.id}`);
+  }
+
   // Prevent rendering if the card is mid-animation and presumably gone
   // This depends on how state updates; if the card disappears immediately
   // after the action, this might not be strictly necessary, but can prevent flicker.

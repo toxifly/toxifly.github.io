@@ -13,7 +13,6 @@ export const enemies: Record<string, EnemyDefinition> = {
     maxHp: 15,
     maxEnergy: 1,
     deck: ['strike'], // Enemy uses card IDs
-    // image: 'slime.png', // Removed
     description: 'A basic slime enemy.',
   },
   // Add more enemies here

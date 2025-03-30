@@ -1,5 +1,5 @@
 import React from 'react';
-import { GameState } from '../../../server/src/types'; // Assuming types are accessible like this
+import { GameState } from '../../../server/src/types'; // Adjust import path if needed
 // You might need to adjust the import path for GameState depending on your setup.
 // If using a shared types package, import from there instead.
 import styles from './ActionPanel.module.css';
@@ -13,7 +13,7 @@ type GameActions = {
     // Adjust payload/return types based on actual SDK/game logic if needed
     startBattle?: (payload?: any) => Promise<any>; // Make optional if not always present
     // Add other actions used by ActionPanel if any in the future
-    // Example: endTurn?: (payload?: any) => Promise<any>;
+    // Example: selectReward?: (payload?: any) => Promise<any>;
 };
 
 interface ActionPanelProps {
@@ -51,18 +51,8 @@ const ActionPanel: React.FC<ActionPanelProps> = ({ gameState, actions, onViewDec
                     Start Battle
                 </button>
             )}
-
-            {/* Add other buttons here if needed, e.g., End Turn */}
-            {/* {gameState.phase === 'fighting' && gameState.turn === 'player' && actions.endTurn && (
-                <button onClick={() => actions.endTurn?.()} className={styles.button}>
-                    End Turn
-                </button>
-            )} */}
         </div>
     );
 };
-
-// Remove old inline styles const
-// const styles = { ... };
 
 export default ActionPanel; 
