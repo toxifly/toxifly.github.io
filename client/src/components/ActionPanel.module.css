@@ -1,0 +1,51 @@
+.panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px; /* Increased padding */
+    border: 1px solid #444; /* Darker border */
+    border-radius: 8px; /* Slightly more rounded */
+    background-color: rgba(42, 42, 62, 0.9); /* Dark transparent background */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+
+    /* Positioning */
+    position: fixed;
+    right: 20px;
+    top: 150px; /* Adjust as needed */
+    width: 160px; /* Adjust width */
+    z-index: 50; /* Ensure it's above game elements but below modals */
+}
+
+.button {
+    padding: 10px 15px;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    background-color: #007bff;
+    color: white;
+    font-size: 1rem;
+    font-weight: bold;
+    text-align: center;
+    transition: background-color 0.2s ease;
+}
+
+.button:hover {
+    background-color: #0056b3;
+}
+
+.buttonSecondary {
+    padding: 8px 12px;
+    cursor: pointer;
+    border: 1px solid #6c757d;
+    border-radius: 5px;
+    background-color: #5a6268; /* Slightly darker secondary */
+    color: white;
+    font-size: 0.9rem;
+    text-align: center;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.buttonSecondary:hover {
+    background-color: #4e555b;
+    border-color: #5a6268;
+} 

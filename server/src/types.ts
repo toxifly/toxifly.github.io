@@ -36,6 +36,12 @@ export interface Buff {
 }
 
 /**
+ * Defines the static properties of a buff/debuff.
+ * Used in GameConfig and loaded from data/buffs.ts.
+ */
+export type BuffDefinition = Omit<Buff, 'stacks' | 'duration'>;
+
+/**
  * Base state for any entity participating in combat.
  */
 export interface CombatantState {
@@ -60,6 +66,7 @@ export interface PlayerState extends CombatantState {
   hand: CardDefinition[]; // Current cards in hand
   discard: string[]; // Card IDs
   nextCard: CardDefinition | null; // The next card to be played automatically
+  allCards: string[]; // All card IDs owned by the player in this run
 }
 
 /**
@@ -84,13 +91,13 @@ export type EnemyDefinition = Omit<
  */
 export interface GameState {
   floor: number;
-  phase: 'fighting' | 'reward' | 'gameOver';
+  phase: 'pre_battle' | 'fighting' | 'reward' | 'gameOver';
   turn: 'player' | 'enemy';
   player: PlayerState;
   enemy: EnemyState;
   rewardOptions: CardDefinition[][]; // Array of reward sets, each set is an array of cards
   currentRewardSet: number;
-  currency?: number;
+  currency: number;
 }
 
 /**
@@ -108,7 +115,7 @@ export interface GameConfig {
   // Game Data Definitions
   cards: Record<string, CardDefinition>;
   enemies: Record<string, EnemyDefinition>; // Changed Omit<...> to EnemyDefinition
-  buffs: Record<string, Omit<Buff, 'stacks' | 'duration'>>; // Definitions for buffs/debuffs
+  buffs: Record<string, BuffDefinition>; // Definitions for buffs/debuffs - Changed Omit<...> to BuffDefinition
 }
 
 /**
@@ -119,7 +126,8 @@ export type ActionRequest =
   | { type: 'autoPlayCard'; payload: {} } // Payload might be empty if auto-playing the first card
   | { type: 'selectReward'; payload: { cardIndex: number } } // Index of the chosen card in the current reward set, or -1 to skip
   | { type: 'endTurn'; payload: {} } // Optional: If manual turn ending is implemented
-  | { type: 'newGame'; payload: {} }; // Optional: To start a new game after game over
+  | { type: 'newGame'; payload: {} } // Optional: To start a new game after game over
+  | { type: 'startBattle'; payload: {} }; // Added for starting the first battle
 // Add other action types as needed
 
 /**

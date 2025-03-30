@@ -2,12 +2,14 @@ import express from 'express';
 import { RequestHandler } from 'express-serve-static-core';
 import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
+import cors from 'cors';
 
 // Import game logic, data, types, and config
 import { DefaultGameManager } from './gameManager';
 import { config as gameConfigConstants } from './config';
 import { cards } from './data/cards';
 import { enemies } from './data/enemies';
+import { buffs } from './data/buffs';
 import { GameConfig, GameState, ActionRequest } from './types'; // Added GameState, ActionRequest
 
 // Create an Express application
@@ -15,6 +17,9 @@ const app = express();
 const port = process.env.PORT || 3001; // Use environment variable or default port
 
 // --- Middleware ---
+// Enable CORS for all origins (you might want to restrict this in production)
+app.use(cors());
+
 // Add middleware to parse JSON request bodies
 app.use(express.json());
 
@@ -33,7 +38,7 @@ const gameConfig: GameConfig = {
   cards: cards,
   enemies: enemies,
   // Add buff definitions (assuming an empty object for now, update if buffs.ts exists)
-  buffs: {}, // TODO: Load from data/buffs.ts if/when created
+  buffs: buffs,
 };
 
 // --- Instantiate Game Manager ---
@@ -88,7 +93,7 @@ app.get('/api/state/:playerId', function(req, res) {
   }
 } as RequestHandler<GetStateParams>);
 
-// POST /api/validate-action - Stub endpoint for validating player actions
+// POST /api/validate-action - Validates player actions and broadcasts state updates
 // Use type casting to specify the handler type
 app.post('/api/validate-action', async function(req, res) {
   const { playerId, action } = req.body as ValidateActionBody;
@@ -100,8 +105,52 @@ app.post('/api/validate-action', async function(req, res) {
   console.log(`Received action validation request for player ${playerId}:`, action);
 
   try {
-    // Stub implementation
-    const validationResult = { success: true, message: "Action validation stub" };
+    // Call the actual game manager validation and AWAIT the result
+    const validationResult = await gameManager.validateAction(playerId, action);
+
+    // If the action was successful, potentially run enemy turn and broadcast
+    if (validationResult.success) {
+      // Get the state *after* the player's action has been applied
+      let stateAfterPlayerAction = gameManager.getState(playerId);
+
+      // --- Start Step 33: Trigger Enemy Turn and Broadcast After ---
+      let finalStateToBroadcast = stateAfterPlayerAction;
+
+      // Check if the player's action ended their turn
+      if (stateAfterPlayerAction.turn === 'enemy') {
+        console.log(`Player ${playerId}'s action resulted in enemy turn. Running enemy turn...`);
+        // Run the enemy turn logic, which modifies the state object directly
+        gameManager.runEnemyTurn(stateAfterPlayerAction);
+        // The state object is now updated with the results of the enemy turn
+        // finalStateToBroadcast already references the modified state object
+        console.log(`Enemy turn completed for player ${playerId}. New turn: ${finalStateToBroadcast.turn}, Phase: ${finalStateToBroadcast.phase}`);
+
+        // Check if turn switched back to player after enemy turn
+        if (finalStateToBroadcast.turn === 'player' && finalStateToBroadcast.phase === 'fighting') {
+            console.log(`Turn switched back to player ${playerId}. Applying player start-of-turn buffs.`);
+            gameManager.applyStartOfTurnBuffs(finalStateToBroadcast.player);
+            // NOTE: No need to get state again, applyStartOfTurnBuffs modifies the object
+        }
+      }
+      // --- End Step 33 ---
+
+      // Broadcast the final state (either after player action or after enemy turn)
+      const ws = activeConnections.get(playerId);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        const stateUpdateMessage = {
+          type: 'state_update',
+          payload: {
+            gameState: finalStateToBroadcast, // Use the final state
+          },
+        };
+        ws.send(JSON.stringify(stateUpdateMessage));
+        console.log(`Sent state_update to player ${playerId} (Turn: ${finalStateToBroadcast.turn}, Phase: ${finalStateToBroadcast.phase})`);
+      } else {
+        console.warn(`WebSocket not found or not open for player ${playerId} after action/enemy turn.`);
+      }
+    }
+
+    // Send the validation result back via HTTP (this doesn't need the game state)
     res.json(validationResult);
   } catch (error) {
     console.error(`Error validating action for player ${playerId}:`, error);

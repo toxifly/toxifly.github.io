@@ -1,0 +1,83 @@
+/* Base card styling */
+.card {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 5px;
+  width: 150px; /* Adjust as needed */
+  min-height: 200px; /* Adjust as needed */
+  display: flex;
+  flex-direction: column;
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative; /* For positioning cost/image absolutely */
+  transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth transition for hover/focus */
+}
+
+/* Style for the card designated as "next" */
+.nextCard {
+  border: 2px solid blue;
+  box-shadow: 0 4px 8px rgba(0, 0, 255, 0.3);
+}
+
+/* Style for the cost display */
+.cost {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  background-color: lightblue;
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  border: 1px solid #aaa;
+  z-index: 1; /* Ensure cost is above image */
+}
+
+/* Style for the card image */
+.image {
+  width: 80%; /* Adjust as needed */
+  height: auto;
+  margin: 10px auto;
+  display: block;
+}
+
+/* Style for the card name */
+.name {
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 5px;
+  margin-top: auto; /* Push name towards bottom if description is short */
+}
+
+/* Style for the card description */
+.description {
+  font-size: 0.9em;
+  text-align: center;
+  flex-grow: 1; /* Make description take remaining space */
+  margin-bottom: 5px;
+}
+
+/* Animation keyframes */
+@keyframes playCardAnimation {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-20px) scale(1.05);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(50px) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* Class applied when the card is being played */
+.playing {
+  animation: playCardAnimation 0.5s ease-out forwards;
+} 
