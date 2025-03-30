@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import type { GameState, GameConfig } from '../../../server/src/types'; // Adjust path if needed
+import type { GameState, GameConfig, CardDefinition } from '../../../server/src/types'; // Adjust path if needed
 import PlayerDisplay from './PlayerDisplay';
 import EnemyDisplay from './EnemyDisplay';
 import CardDisplay from './CardDisplay';
@@ -10,129 +10,109 @@ interface GameUIProps {
     animatingCardId?: string | null;
 }
 
-const gameUiStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '20px',
-    padding: '20px',
-    border: '1px solid lightgray',
-    borderRadius: '8px',
-    backgroundColor: '#f0f0f0',
-    minHeight: '80vh', // Ensure it takes up some vertical space
-};
-
-const combatantsStyle: React.CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-around',
-    alignItems: 'flex-start', // Align tops of player/enemy displays
-    width: '100%',
-    maxWidth: '800px', // Limit width
-    gap: '20px',
-};
-
-const cardAreaStyle: React.CSSProperties = {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'flex-start', // Align cards at the top
-    gap: '15px',
-    marginTop: '20px',
-    width: '100%',
-};
-
-const cardSectionStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '5px',
-};
-
-const cardLabelStyle: React.CSSProperties = {
-    fontWeight: 'bold',
-    fontSize: '0.9em',
-    color: '#555',
-};
-
 /**
- * Main UI for the fighting phase. Displays player, enemy, current card, and next card.
+ * Main UI for the fighting phase. Displays Floor, Enemy, Player, current playable card, and next card to draw.
  */
 const GameUI: React.FC<GameUIProps> = ({ gameState, animatingCardId }) => {
     const { gameConfig } = useGame(); // Get gameConfig from context
-    const currentCard = gameState.player.hand.length > 0 ? gameState.player.hand[0] : null;
-    const nextCardId = gameState.player.nextCard; // This is a string ID, not a CardDefinition
-    
-    // Look up the actual card definition from gameConfig using the ID
-    const nextCardDefinition = nextCardId && gameConfig?.cards ? gameConfig.cards[nextCardId] : null;
 
-    // Determine if the next card is the one being played - compare string IDs directly
-    const isNextCardBeingPlayed = !!(nextCardId && animatingCardId && nextCardId === animatingCardId);
+    // Card to be played next (from state)
+    const playableCardId = gameState.player.nextCard;
+    const playableCardDefinition = playableCardId && gameConfig?.cards ? gameConfig.cards[playableCardId] : null;
+
+    // Card at the top of the draw pile (preview)
+    const nextDrawCardId = gameState.player.deck.length > 0 ? gameState.player.deck[0] : null;
+    const nextDrawCardDefinition = nextDrawCardId && gameConfig?.cards ? gameConfig.cards[nextDrawCardId] : null;
+
+    // Determine if the playable card is the one being animated
+    const isPlayableCardBeingAnimated = !!(playableCardId && animatingCardId && playableCardId === animatingCardId);
 
     useEffect(() => {
         console.log(`[GameUI] animatingCardId changed: ${animatingCardId}`);
-    }, [animatingCardId]);
+        console.log(`[GameUI] Playable Card ID: ${playableCardId}, Next Draw ID: ${nextDrawCardId}`);
+    }, [animatingCardId, playableCardId, nextDrawCardId]);
 
-    // Debug log for lastEnemyCardPlayedId
+    // Add debug logging for card lookups
     useEffect(() => {
-        console.log(`[GameUI] gameState.lastEnemyCardPlayedId: ${gameState.lastEnemyCardPlayedId}`);
-    }, [gameState.lastEnemyCardPlayedId]);
-
-    // Add debug logging for nextCardId and definition
-    useEffect(() => {
-        console.log(`[GameUI] nextCardId: ${nextCardId}, definition found: ${!!nextCardDefinition}`);
-        if (nextCardId && !nextCardDefinition) {
-            console.warn(`[GameUI] Card definition not found for ID: ${nextCardId}`);
+        if (playableCardId && !playableCardDefinition) {
+            console.warn(`[GameUI] Playable card definition not found for ID: ${playableCardId}`);
         }
-    }, [nextCardId, nextCardDefinition]);
+        if (nextDrawCardId && !nextDrawCardDefinition) {
+            console.warn(`[GameUI] Next draw card definition not found for ID: ${nextDrawCardId}`);
+        }
+    }, [playableCardId, playableCardDefinition, nextDrawCardId, nextDrawCardDefinition]);
+
+
+    // Simple loading/error check for config
+    if (!gameConfig) {
+        return <div>Loading configuration...</div>;
+    }
 
     return (
-        <div style={gameUiStyle}>
-            {/* Top Section: Combatants (Enemy and Player side-by-side) */}
-            <div style={combatantsStyle}>
-                 {/* Player Display on Left */}
-                 <div style={{ width: '45%' }}> {/* Adjust width as needed */}
-                    <PlayerDisplay player={gameState.player} />
-                 </div>
+        // Use CSS classes for styling the main container if needed
+        <div className="game-ui-container">
+             {/* Floor Indicator */}
+             <div className="floor-indicator">
+                Floor {gameState.floor}
+             </div>
 
-                 {/* Enemy Display on Right */}
-                 <div style={{ width: '45%' }}> {/* Adjust width as needed */}
-                    <EnemyDisplay
-                        enemy={gameState.enemy}
-                        lastPlayedCardId={gameState.lastEnemyCardPlayedId} // Pass the ID
-                        gameConfig={gameConfig} // Pass the config
-                    />
-                 </div>
-            </div>
+             {/* Enemy Display */}
+             <div className="enemy-section">
+                <EnemyDisplay
+                    enemy={gameState.enemy}
+                    // Removed lastPlayedCardId and gameConfig props as they are unused now in EnemyDisplay
+                />
+             </div>
 
-            {/* Middle Section: Cards */}
-            <div style={cardAreaStyle}>
-                 {/* Current Card Display */}
-                 <div style={cardSectionStyle}>
-                    <span style={cardLabelStyle}>Current Card</span>
-                    {currentCard ? (
-                        <CardDisplay card={currentCard} isNextCard={false} />
-                    ) : (
-                        <div style={{ width: '150px', height: '200px', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e9e9e9', borderRadius: '8px' }}>
-                            No card
-                        </div>
-                    )}
-                 </div>
+             {/* Player Display */}
+             <div className="player-section">
+                <PlayerDisplay player={gameState.player} />
+             </div>
 
-                 {/* Next Card Display */}
-                 <div style={cardSectionStyle}>
-                    <span style={cardLabelStyle}>Next Card</span>
-                    {nextCardDefinition ? (
+             {/* Card Area: Playable card and next draw preview side-by-side */}
+             <div className="card-area">
+                 {/* Playable Card Display */}
+                 <div className="playable-card-section">
+                    {/* Label removed as per image */}
+                    {/* <span className="card-label">Playable Card</span> */}
+                    {playableCardDefinition ? (
                         <CardDisplay
-                            card={nextCardDefinition} // Pass the actual CardDefinition object
-                            isNextCard={true}
-                            isBeingPlayed={isNextCardBeingPlayed}
+                            card={playableCardDefinition}
+                            isNextCard={true} // Highlight the playable card
+                            isBeingPlayed={isPlayableCardBeingAnimated}
+                            isNextDrawPreview={false} // Explicitly false
                         />
                     ) : (
-                        <div style={{ width: '150px', height: '200px', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e9e9e9', borderRadius: '8px' }}>
-                            {nextCardId ? `Loading card: ${nextCardId}` : 'No next card'}
+                        <div className="card-placeholder">
+                            {/* Placeholder styling handled by CSS */}
+                            {playableCardId ? `Loading card: ${playableCardId}` : 'No card'}
                         </div>
                     )}
                  </div>
-            </div>
+
+                 {/* Next Draw Preview */}
+                 <div className="next-draw-section">
+                    <span className="card-label">Next Draw:</span>
+                    {nextDrawCardDefinition ? (
+                        <CardDisplay
+                            card={nextDrawCardDefinition}
+                            isNextCard={false} // Not the primary playable card
+                            isBeingPlayed={false} // Not being played
+                            isNextDrawPreview={true} // Indicate it's the preview
+                        />
+                    ) : (
+                        <div className="card-placeholder-small">
+                            {/* Placeholder styling handled by CSS */}
+                            Deck Empty
+                        </div>
+                    )}
+                 </div>
+             </div>
+
+            {/* Action Log Removed */}
+            {/* <div style={{ width: '100%', maxWidth: '800px', marginTop: '20px' }}>
+                 <ActionLog logs={gameState.logs || []} />
+            </div> */}
         </div>
     );
 };

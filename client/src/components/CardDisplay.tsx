@@ -4,16 +4,18 @@ import styles from './CardDisplay.module.css'; // Import CSS module
 
 interface CardDisplayProps {
   card: CardDefinition;
-  isNextCard?: boolean; // Make optional if used elsewhere without it
-  isBeingPlayed?: boolean; // New prop for animation trigger
+  isNextCard?: boolean; // Highlight if it's the main playable card
+  isBeingPlayed?: boolean; // Animation trigger
+  isNextDrawPreview?: boolean; // Added: Style as the smaller next draw preview
 }
 
 // Removed inline styles as they are now in CardDisplay.module.css
 
 const CardDisplay: React.FC<CardDisplayProps> = ({
   card,
-  isNextCard = false, // Default value
-  isBeingPlayed = false, // Default value
+  isNextCard = false,
+  isBeingPlayed = false,
+  isNextDrawPreview = false, // Added prop
 }) => {
   const imagePath = `/images/cards/${card.id}.png`; // Assumes images are in public/images/cards/
 
@@ -22,11 +24,12 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
     styles.card,
     isNextCard ? styles.nextCard : '',
     isBeingPlayed ? styles.playing : '',
+    isNextDrawPreview ? styles.nextDrawPreview : '', // Apply preview style
   ]
     .filter(Boolean) // Remove empty strings
     .join(' '); // Join into a single string
 
-  console.log(`[CardDisplay] Rendering card: ${card.id}. isNextCard: ${isNextCard}, isBeingPlayed: ${isBeingPlayed}`);
+  console.log(`[CardDisplay] Rendering card: ${card.id}. isNextCard: ${isNextCard}, isBeingPlayed: ${isBeingPlayed}, isNextDrawPreview: ${isNextDrawPreview}`);
   if (isBeingPlayed) {
       console.log(`[CardDisplay] Applying 'playing' class to card: ${card.id}`);
   }
@@ -43,7 +46,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
     <div className={cardClasses}>
       <div className={styles.cost}>{card.cost}</div>
       {/* Use image class */}
-      <img src={imagePath} alt={card.name} className={styles.image} />
+      <img src={imagePath} alt={card.name} className={styles.image} onError={(e) => (e.currentTarget.src = '/images/cards/default.png')} /> {/* Added fallback */}
       {/* Use name class */}
       <div className={styles.name}>{card.name}</div>
       {/* Use description class */}

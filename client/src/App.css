@@ -40,3 +40,67 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Add styles for GameUI layout */
+.game-ui-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center sections horizontally */
+    gap: 15px; /* Space between major sections */
+    width: 100%; /* Ensure it takes available width */
+    padding: 10px; /* Add some padding */
+    box-sizing: border-box;
+}
+
+.floor-indicator {
+    font-size: 1.2em;
+    color: #ccc;
+    margin-bottom: 10px;
+}
+
+.enemy-section, .player-section, .card-area {
+    width: 100%; /* Make sections take full width */
+    max-width: 600px; /* Max width for content sections */
+    margin-bottom: 15px; /* Space below sections */
+}
+
+/* Style the card area to display cards side-by-side */
+.card-area {
+  display: flex;
+  justify-content: center; /* Center the card group */
+  align-items: flex-start; /* Align cards to the top */
+  gap: 10px; /* Space between the playable card and the preview */
+  min-height: 250px; /* Ensure enough space for cards */
+  flex-wrap: wrap; /* Allow wrapping if space is very limited */
+}
+
+/* Optional: Ensure placeholder divs have some minimum size */
+.card-placeholder, .card-placeholder-small {
+  min-width: 160px; /* Match card width */
+  min-height: 220px; /* Match card height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  border: 1px dashed #555;
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.card-placeholder-small {
+    /* Adjust size if needed based on scaling */
+    min-width: calc(160px * 0.6);
+    min-height: calc(220px * 0.6);
+}
+
+.playable-card-section, .next-draw-section {
+  display: flex;
+  flex-direction: column; /* Stack label above card */
+  align-items: center; /* Center label/card horizontally */
+}
+
+.card-label {
+    font-size: 0.9em;
+    color: #aaa;
+    margin-bottom: 5px;
+}

@@ -1,48 +1,55 @@
-/* Base card styling */
+/* Base card styling - Dark Theme */
 .card {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 10px;
+  border: 2px solid #4a4a6a; /* Dark blue/purple border */
+  border-radius: 10px; /* Slightly rounder */
+  padding: 8px;
   margin: 5px;
-  width: 150px; /* Adjust as needed */
-  min-height: 200px; /* Adjust as needed */
+  width: 160px; /* Slightly wider */
+  min-height: 220px; /* Slightly taller */
   display: flex;
   flex-direction: column;
-  background-color: #f9f9f9;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(145deg, #2c2c3e, #1e1e2f); /* Dark gradient background */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
   position: relative; /* For positioning cost/image absolutely */
   transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth transition for hover/focus */
+  color: #e0e0e0; /* Light text */
+  font-family: 'Courier New', Courier, monospace; /* Monospace font */
 }
 
-/* Style for the card designated as "next" */
+/* Style for the card designated as playable */
 .nextCard {
-  border: 2px solid blue;
-  box-shadow: 0 4px 8px rgba(0, 0, 255, 0.3);
+  border-color: #88aaff; /* Lighter blue border for emphasis */
+  box-shadow: 0 0 15px rgba(100, 150, 255, 0.5);
 }
 
 /* Style for the cost display */
 .cost {
   position: absolute;
-  top: 5px;
-  left: 5px;
-  background-color: lightblue;
+  top: 8px;
+  left: 8px;
+  background-color: #1a1a2a; /* Dark background */
+  color: #ffcc00; /* Yellow cost */
+  border: 1px solid #ffcc00; /* Yellow border */
   border-radius: 50%;
-  width: 25px;
-  height: 25px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  border: 1px solid #aaa;
+  font-size: 1.1em;
   z-index: 1; /* Ensure cost is above image */
+  box-shadow: 0 0 5px rgba(255, 204, 0, 0.5);
 }
 
 /* Style for the card image */
 .image {
-  width: 80%; /* Adjust as needed */
+  max-width: 90%; /* Allow image to be slightly larger */
   height: auto;
-  margin: 10px auto;
+  margin: 15px auto 5px auto; /* Adjust margins */
   display: block;
+  border-radius: 4px; /* Optional: slight rounding on image */
+  filter: brightness(0.9); /* Slightly darken image to fit theme */
 }
 
 /* Style for the card name */
@@ -51,14 +58,20 @@
   text-align: center;
   margin-bottom: 5px;
   margin-top: auto; /* Push name towards bottom if description is short */
+  font-size: 1.1em;
+  color: #ffffff; /* White name */
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
 }
 
 /* Style for the card description */
 .description {
-  font-size: 0.9em;
+  font-size: 0.85em; /* Slightly smaller */
   text-align: center;
   flex-grow: 1; /* Make description take remaining space */
   margin-bottom: 5px;
+  padding: 0 5px;
+  color: #c0c0d0; /* Lighter grey description */
+  line-height: 1.3;
 }
 
 /* Animation keyframes */
@@ -80,4 +93,16 @@
 /* Class applied when the card is being played */
 .playing {
   animation: playCardAnimation 0.5s ease-out forwards;
+  pointer-events: none; /* Prevent interaction during animation */
+}
+
+/* Style for the smaller next draw preview card */
+.nextDrawPreview {
+    transform: scale(0.6); /* Make preview card smaller */
+    /* Align scaling origin to the top-left corner for better alignment in flex layout */
+    transform-origin: top left;
+    opacity: 0.9;
+    margin: 0; /* Reset margin if needed */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+    border-width: 1px; /* Thinner border for preview */
 } 

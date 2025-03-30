@@ -1,0 +1,63 @@
+.enemy-display-container {
+    border: 3px solid #6a0dad; /* Purple border */
+    border-radius: 10px;
+    padding: 10px;
+    /* Background image set inline in component using specific enemy */
+    background-size: contain; /* Changed from cover to contain to show whole sprite */
+    background-position: left center; /* Position sprite to the left */
+    background-repeat: no-repeat;
+    min-height: 180px; /* Adjust height */
+    display: flex;
+    align-items: center; /* Vertically center info box */
+    font-family: 'Courier New', Courier, monospace;
+    background-color: rgba(20, 5, 30, 0.85); /* Dark purple fallback/overlay - slightly less transparent */
+    box-shadow: 0 0 15px rgba(106, 13, 173, 0.6); /* Purple glow */
+    position: relative;
+    overflow: hidden;
+}
+
+/* Left side - Image container REMOVED */
+/* .enemy-image-container { ... } */
+/* .enemy-image { ... } */
+
+/* Right side - Info container */
+.enemy-info-container {
+    flex-grow: 1; /* Take remaining space */
+    color: #e8d8ff; /* Light purple text */
+    padding: 10px;
+    background-color: rgba(40, 10, 60, 0.7); /* Slightly more transparent purple box for info */
+    border-radius: 6px;
+    margin-left: 120px; /* Add margin to avoid overlapping the background image area */
+    min-width: 200px; /* Ensure info box has some minimum width */
+}
+
+.enemy-stats {
+    /* Use CombatantDisplay styles, but override if needed */
+}
+
+.enemy-stats .stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-size: 1.1em;
+}
+
+.enemy-stats .stat-label {
+    color: #c0a0e0; /* Lighter purple label */
+    margin-right: 10px;
+}
+
+.enemy-stats .stat-value {
+    color: #ffffff; /* White value */
+    font-weight: bold;
+}
+
+.enemy-stats .buff-display {
+    margin-top: 8px;
+    justify-content: flex-start; /* Align buffs left */
+}
+
+/* Hide the old enemy played card indicator if it exists */
+.enemy-played-card-indicator {
+    display: none;
+} 

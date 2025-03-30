@@ -1,51 +1,76 @@
 .panel {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 15px; /* Increased padding */
-    border: 1px solid #444; /* Darker border */
-    border-radius: 8px; /* Slightly more rounded */
-    background-color: rgba(42, 42, 62, 0.9); /* Dark transparent background */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    gap: 12px; /* Slightly more gap */
+    padding: 15px;
+    border: 2px solid #555; /* Dark grey border */
+    border-radius: 6px;
+    background-color: #1a1a1d; /* Very dark background */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
 
     /* Positioning */
     position: fixed;
-    right: 20px;
-    top: 150px; /* Adjust as needed */
-    width: 160px; /* Adjust width */
-    z-index: 50; /* Ensure it's above game elements but below modals */
+    right: 25px; /* Adjust position */
+    top: 50%; /* Center vertically */
+    transform: translateY(-50%); /* Adjust vertical centering */
+    width: 180px; /* Slightly wider */
+    z-index: 50;
+    font-family: 'Courier New', Courier, monospace;
 }
 
-.button {
-    padding: 10px 15px;
+.button, .buttonSecondary { /* Apply common styles */
+    padding: 12px 18px; /* Larger padding */
     cursor: pointer;
-    border: none;
-    border-radius: 5px;
-    background-color: #007bff;
-    color: white;
-    font-size: 1rem;
+    border-radius: 4px;
+    font-size: 1.1em; /* Larger font */
     font-weight: bold;
     text-align: center;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+    background-color: #3a3a4a; /* Dark greyish-blue button */
+    color: #e0e0e0; /* Light text */
+    border: 1px solid #666; /* Slightly lighter border */
+    text-transform: uppercase; /* Match image style */
+    letter-spacing: 1px;
 }
 
-.button:hover {
-    background-color: #0056b3;
+.button:hover, .buttonSecondary:hover {
+    background-color: #4a4a5a; /* Lighter on hover */
+    box-shadow: 0 0 8px rgba(150, 150, 180, 0.4);
 }
 
-.buttonSecondary {
-    padding: 8px 12px;
-    cursor: pointer;
-    border: 1px solid #6c757d;
-    border-radius: 5px;
-    background-color: #5a6268; /* Slightly darker secondary */
-    color: white;
-    font-size: 0.9rem;
-    text-align: center;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+.button:active, .buttonSecondary:active {
+    background-color: #2a2a3a; /* Darker on click */
+    transform: scale(0.98); /* Slight shrink on click */
+}
+
+/* Optional: if you need distinct secondary styles */
+/* .buttonSecondary {
+    background-color: #555;
+    border-color: #777;
 }
 
 .buttonSecondary:hover {
+    background-color: #666;
+} */
+
+/* Remove old button specific styles if they conflict */
+/*
+.button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+}
+.button:hover {
+    background-color: #0056b3;
+}
+.buttonSecondary {
+     padding: 8px 12px;
+    border: 1px solid #6c757d;
+     background-color: #5a6268;
+    color: white;
+    font-size: 0.9rem;
+}
+ .buttonSecondary:hover {
     background-color: #4e555b;
     border-color: #5a6268;
-} 
+} */ 

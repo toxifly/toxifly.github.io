@@ -1,71 +1,73 @@
+/* Dark theme container with blue border */
 .player-display-container {
-  border: 1px solid #444;
-  padding: 15px;
-  background-color: #2a2a2e; /* Dark background */
-  color: #eee; /* Light text */
+  border: 3px solid #0077cc; /* Blue border as in image */
+  padding: 15px 20px; /* Adjust padding */
+  background-color: rgba(10, 20, 40, 0.85); /* Dark blueish background */
+  color: #e0e0f0; /* Light text */
   display: flex;
-  justify-content: space-between; /* Puts info left, card right */
-  align-items: flex-start;
+  justify-content: space-between; /* Name left, stats right */
+  align-items: flex-start; /* Align items at the top */
   border-radius: 8px;
-  margin-bottom: 20px; /* Space below player area */
-  min-height: 150px; /* Ensure minimum height */
+  /* margin-bottom: 20px; Removed, spacing handled by GameUI layout */
+  min-height: 100px; /* Adjust height as needed */
+  font-family: 'Courier New', Courier, monospace; /* Monospace font */
+  box-shadow: inset 0 0 10px rgba(0, 120, 200, 0.5); /* Inner blue glow */
 }
 
+/* Left side - Player Name */
 .player-info {
   text-align: left;
+  flex-shrink: 0; /* Prevent shrinking */
+  margin-right: 20px; /* Space between name and stats */
 }
 
 .player-info h2 {
-  margin-top: 0;
-  color: #ccc; /* Slightly lighter heading */
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 1.5em;
+  margin: 0;
+  color: #cceeff; /* Light blueish heading */
+  font-size: 1.8em; /* Larger name */
+  font-weight: bold;
 }
 
+/* Right side - Stats Container */
 .stats-container {
-  margin-top: 10px;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 1.1em;
-  /* Reset styles that might be inherited from CombatantDisplay if needed */
+  text-align: right;
+  flex-grow: 1; /* Allow stats to take remaining space */
 }
 
-.stats-container .buff-display {
-    margin-top: 10px; /* Add space above buffs */
-}
-
+/* Individual stat row */
 .stat-row {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 4px;
+  justify-content: space-between; /* Label left, value right within the row */
+  margin-bottom: 5px;
+  font-size: 1.1em; /* Slightly larger stat font */
   min-width: 150px; /* Ensure stats area has some width */
 }
 
 .stat-label {
-  color: #aaa; /* Grey label */
-  margin-right: 10px;
+  color: #aaaacc; /* Lighter grey-blue label */
+  margin-right: 15px; /* More space between label and value */
+  text-align: left;
 }
 
 .stat-value {
-  color: #eee; /* White value */
+  color: #ffffff; /* White value */
   font-weight: bold;
+  text-align: right;
+}
+
+/* Styling for buffs coming from CombatantDisplay */
+.stats-container .buff-display {
+    margin-top: 10px; /* Add space above buffs */
+    justify-content: flex-end; /* Align buffs to the right */
+}
+
+.stats-container .buff-display .buff-icon {
+    /* Add specific styles for buff icons if needed */
+    border: 1px solid #6688cc;
 }
 
 
+/* Remove styles related to old layout (e.g., .player-next-card-area) */
 .player-next-card-area {
-  text-align: center;
-  margin-left: 20px; /* Space between stats and card */
-}
-
-.player-next-card-area h3 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    color: #aaa;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 1em;
-}
-
-/* Ensure CardDisplay is sized appropriately */
-.player-next-card-area .card-display {
-  transform: scale(0.8); /* Make card slightly smaller */
-  transform-origin: top center;
+  display: none; /* Hide old card area if it existed */
 } 
