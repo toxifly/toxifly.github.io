@@ -1,19 +1,19 @@
 .enemy-display-container {
-    border: 3px solid #6a0dad; /* Purple border */
-    border-radius: 10px;
-    padding: 10px;
-    /* Background image set inline in component using specific enemy */
-    background-size: contain; /* Changed from cover to contain to show whole sprite */
-    background-position: left center; /* Position sprite to the left */
-    background-repeat: no-repeat;
-    min-height: 180px; /* Adjust height */
-    display: flex;
-    align-items: center; /* Vertically center info box */
-    font-family: 'Courier New', Courier, monospace;
-    background-color: rgba(20, 5, 30, 0.85); /* Dark purple fallback/overlay - slightly less transparent */
-    box-shadow: 0 0 15px rgba(106, 13, 173, 0.6); /* Purple glow */
-    position: relative;
-    overflow: hidden;
+    position: relative; /* Needed for absolute positioning of info container */
+    border: 2px solid #800080; /* Example purple border */
+    border-radius: 8px;
+    padding: 15px; /* Padding around the content */
+    width: 90%;
+    max-width: 1400px; /* Increased max-width */
+    margin: auto; /* Keep centering */
+    min-height: 250px; /* Example height */
+    display: flex; /* Use flexbox for alignment */
+    align-items: flex-start; /* Align info box to the top */
+    justify-content: flex-end; /* Align info box to the right */
+    overflow: hidden; /* Hide overflowing background */
+    background-position: center center; /* Center the background image */
+    background-size: cover; /* Keep as is */
+    color: #e0e0e0; /* Light grey text for fallback */
 }
 
 /* Left side - Image container REMOVED */
@@ -22,13 +22,16 @@
 
 /* Right side - Info container */
 .enemy-info-container {
-    flex-grow: 1; /* Take remaining space */
-    color: #e8d8ff; /* Light purple text */
-    padding: 10px;
-    background-color: rgba(40, 10, 60, 0.7); /* Slightly more transparent purple box for info */
-    border-radius: 6px;
-    margin-left: 120px; /* Add margin to avoid overlapping the background image area */
-    min-width: 200px; /* Ensure info box has some minimum width */
+    /* position: absolute; */ /* Removed absolute positioning */
+    /* top: 10px; */        /* Removed */
+    /* right: 10px; */       /* Removed */
+    background-color: rgba(40, 10, 60, 0.85); /* Slightly less transparent */
+    padding: 15px; /* Increased padding */
+    border-radius: 8px; /* Match parent */
+    color: #eee; /* Light text for dark background */
+    width: auto; /* Adjust width automatically based on content */
+    max-width: 350px; /* Increased max-width, adjust as needed */
+    margin-left: 20px; /* Add some margin from the left edge if needed */
 }
 
 .enemy-stats {

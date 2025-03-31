@@ -1,50 +1,48 @@
 import React from 'react';
-import type { PlayerState } from '../../../server/src/types'; // Adjust path if necessary
+import { PlayerState } from '../../../server/src/types'; // Adjust path as needed
 import CombatantDisplay from './CombatantDisplay';
-import './PlayerDisplay.css'; // Import CSS file
+import './PlayerDisplay.css'; // Import CSS for styling
 
 interface PlayerDisplayProps {
-  player: PlayerState;
+  player: PlayerState | null;
+  maxMomentum: number; // Added: Prop for max momentum
 }
 
 /**
- * Displays the player's name on the left and stats (HP, Block, Energy, Momentum, Buffs) on the right.
- * Uses PlayerDisplay.css for styling.
+ * Displays the player's stats using CombatantDisplay.
+ * Uses player.png as a background image.
+ * Styling is primarily handled by PlayerDisplay.css.
  */
-const PlayerDisplay: React.FC<PlayerDisplayProps> = ({ player }) => {
+const PlayerDisplay: React.FC<PlayerDisplayProps> = ({ player, maxMomentum }) => {
+  if (!player) {
+    return <div className="player-display-container">Loading player...</div>;
+  }
+
+  // Define the path to the player image
+  const playerImagePath = '/images/enemies/player.png'; // Static path for the player image
+
   return (
-    <div className="player-display-container">
-      {/* Left Side: Player Name */}
+    // Apply CSS class and inline style for background image
+    <div
+      className="player-display-container"
+      style={{
+        backgroundImage: `url(${playerImagePath})`,
+        backgroundSize: 'contain', // Ensure full image is visible
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center center', // Center the image
+      }}
+    >
       <div className="player-info">
-        <h2>{player.name}</h2>
-      </div>
-
-      {/* Right Side: Stats */}
-      <div className="stats-container">
-         {/* Use CombatantDisplay for HP, Block, Momentum, Buffs */}
-         {/* We need to pass a subset of stats or modify CombatantDisplay */}
-         {/* Option: Replicate relevant stats here */}
-         <div className="stat-row">
-            <span className="stat-label">HP</span>
-            <span className="stat-value">{player.hp} / {player.maxHp}</span>
-         </div>
-         <div className="stat-row">
-            <span className="stat-label">Block</span>
-            <span className="stat-value">{player.block}</span>
-         </div>
-         {/* Player-specific stats */}
-         <div className="stat-row">
-            <span className="stat-label">Energy</span>
-            <span className="stat-value">{player.energy} / {player.maxEnergy}</span>
-         </div>
-         <div className="stat-row">
-            <span className="stat-label">Momentum</span>
-            <span className="stat-value">{player.momentum} / {player.maxMomentum}</span> {/* Assuming maxMomentum exists */}
-         </div>
-
-         {/* Pass only buffs to CombatantDisplay or render them here */}
-         <CombatantDisplay combatant={{ buffs: player.buffs } as any} /> {/* Pass only buffs or necessary props */}
-
+        <span className="player-name">{player.name}</span>
+        <div className="player-stats">
+          {/* Pass player state and maxMomentum to CombatantDisplay */}
+          <CombatantDisplay combatant={player} maxMomentum={maxMomentum} />
+          {/* Display Energy separately if not part of CombatantDisplay */}
+          <div className="stat-row">
+             <span className="stat-label">Energy:</span>
+             <span className="stat-value">{player.energy} / {player.maxEnergy}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

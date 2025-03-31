@@ -5,7 +5,8 @@ import CombatantDisplay from './CombatantDisplay';
 import './EnemyDisplay.css'; // Import CSS for styling
 
 interface EnemyDisplayProps {
-  enemy: EnemyState;
+  enemy: EnemyState | null;
+  maxMomentum: number; // Added: Prop for max momentum
   // Removed lastPlayedCardId and gameConfig props
 }
 
@@ -20,25 +21,29 @@ interface EnemyDisplayProps {
  * The specific enemy image is used as the background for the entire component.
  * Styling is handled by EnemyDisplay.css.
  */
-const EnemyDisplay: React.FC<EnemyDisplayProps> = ({ enemy }) => {
-  // Removed state and useEffect for displayed card
+const EnemyDisplay: React.FC<EnemyDisplayProps> = ({ enemy, maxMomentum }) => {
+  if (!enemy) {
+    return <div className="enemy-display-container">Loading enemy...</div>;
+  }
 
-  const enemyImageUrl = `/images/enemies/${enemy.id}.png`;
-  // Removed generic backgroundImageUrl
+  const enemyImagePath = `/images/enemies/${enemy.id}.png`; // Assuming ID matches image name
 
   return (
-    // Use CSS class for the main container and set the specific enemy image as background inline
-    <div className="enemy-display-container" style={{ backgroundImage: `url(${enemyImageUrl})` }}>
-        {/* Removed Left Side: Enemy Image Container */}
-
-        {/* Info Container now takes the full width */}
-        <div className="enemy-info-container">
-            {/* Removed duplicate enemy name H2 */}
-            {/* Use CombatantDisplay for stats (assuming it shows name) */}
-            <div className="enemy-stats">
-                 <CombatantDisplay combatant={enemy} />
-            </div>
-        </div>
+    <div
+      className="enemy-display-container"
+      style={{
+        backgroundImage: `url(${enemyImagePath})`,
+        backgroundSize: 'contain', // Changed from 'cover' to 'contain'
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center center', // Keeps it centered
+      }}
+    >
+      {/* Info box aligned to the right */}
+      <div className="enemy-info-container">
+         {/* Removed duplicate enemy name heading */}
+        <CombatantDisplay combatant={enemy} maxMomentum={maxMomentum} />
+        {/* Removed last played card display */}
+      </div>
     </div>
   );
 };

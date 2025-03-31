@@ -48,6 +48,10 @@ const GameUI: React.FC<GameUIProps> = ({ gameState, animatingCardId }) => {
         return <div>Loading configuration...</div>;
     }
 
+    // Attempt to get max momentum from config, default to 10 if not found
+    // NOTE: MAX_MOMENTUM should ideally be added to GameConfig in types.ts and config.ts
+    const maxMomentum = (gameConfig as any).MAX_MOMENTUM ?? 10;
+
     return (
         // Use CSS classes for styling the main container if needed
         <div className="game-ui-container">
@@ -60,13 +64,13 @@ const GameUI: React.FC<GameUIProps> = ({ gameState, animatingCardId }) => {
              <div className="enemy-section">
                 <EnemyDisplay
                     enemy={gameState.enemy}
-                    // Removed lastPlayedCardId and gameConfig props as they are unused now in EnemyDisplay
+                    maxMomentum={maxMomentum} // Pass maxMomentum
                 />
              </div>
 
              {/* Player Display */}
              <div className="player-section">
-                <PlayerDisplay player={gameState.player} />
+                <PlayerDisplay player={gameState.player} maxMomentum={maxMomentum} />
              </div>
 
              {/* Card Area: Playable card and next draw preview side-by-side */}

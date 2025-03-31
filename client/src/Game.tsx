@@ -239,11 +239,20 @@ const Game: React.FC = () => {
     };
 
     return (
-        <div>
-            <h1>Game Active - Player: {connection?.privyId ?? 'Loading...'}</h1>
+        <div style={{ position: 'relative', width: '100%' }}>
             {gameState && gameConfig ? ( // Only show Floor/Turn/ActionPanel/DeckView when state is loaded
                 <>
-                    <p>Floor: {gameState.floor} | Turn: {gameState.turn}</p>
+                    <p style={{
+                        position: 'absolute',
+                        top: '-2rem',
+                        left: '0',
+                        fontSize: '0.8em',
+                        color: '#ccc',
+                        margin: 0,
+                        padding: '5px'
+                     }}>
+                        Floor: {gameState.floor} | Turn: {gameState.turn}
+                    </p>
                     {renderGameContent()}
                     {/* Render ActionPanel, pass gameState, actions, and visibility toggle */}
                     {/* Ensure 'actions' passed here is compatible with ActionPanelProps */}

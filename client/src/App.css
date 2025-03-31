@@ -1,8 +1,11 @@
 #root {
-  max-width: 1280px;
+  /* max-width: 1280px; */ /* Remove or comment out this line */
+  width: 100%; /* Add this line */
   margin: 0 auto;
-  padding: 2rem;
+  /* padding: 1rem 2rem 2rem 2rem; */ /* Remove horizontal padding */
+  padding: 1rem 0 2rem 0; /* Keep vertical padding, remove horizontal */
   text-align: center;
+  box-sizing: border-box; /* Good practice when using width: 100% and padding */
 }
 
 .logo {
@@ -48,6 +51,9 @@
     align-items: center; /* Center sections horizontally */
     gap: 15px; /* Space between major sections */
     width: 100%; /* Ensure it takes available width */
+    max-width: 2000px; /* Increased max-width to accommodate children */
+    margin-left: auto; /* Center the container itself */
+    margin-right: auto; /* Center the container itself */
     padding: 10px; /* Add some padding */
     box-sizing: border-box;
 }
@@ -60,12 +66,13 @@
 
 .enemy-section, .player-section, .card-area {
     width: 100%; /* Make sections take full width */
-    max-width: 600px; /* Max width for content sections */
     margin-bottom: 15px; /* Space below sections */
 }
 
 /* Style the card area to display cards side-by-side */
 .card-area {
+  width: 100%; /* Or keep original styles */
+  margin-bottom: 15px;
   display: flex;
   justify-content: center; /* Center the card group */
   align-items: flex-start; /* Align cards to the top */
