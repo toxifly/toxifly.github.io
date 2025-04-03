@@ -18,11 +18,9 @@ const CombatantDisplay: React.FC<CombatantDisplayProps> = ({ combatant, maxMomen
       <div>
         HP: {combatant.hp} / {combatant.maxHp}
       </div>
-      {combatant.block > 0 && (
-        <div style={{ color: 'blue' }}>
-          Block: {combatant.block}
-        </div>
-      )}
+      <div style={{ color: 'blue' }}>
+        Block: {combatant.block}
+      </div>
       <div style={{ color: 'orange' }}>
         Momentum: {combatant.momentum} / {maxMomentum}
       </div>

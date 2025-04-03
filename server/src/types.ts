@@ -1,4 +1,11 @@
+import type { CardDefinition } from './data/cards';
+import type { EnemyDefinition } from './data/enemies';
+import type { BuffDefinition } from './data/buffs';
+
 // Core type definitions for the game state and entities
+export type { CardDefinition } from './data/cards';
+export type { EnemyDefinition } from './data/enemies';
+export type { BuffDefinition } from './data/buffs';
 
 /**
  * Represents a single effect a card can have (e.g., deal damage, gain block, apply buff)
@@ -8,18 +15,6 @@ export interface CardEffect {
   value?: number; // For damage, block, draw amount, energy gain
   buffType?: string; // ID of the buff to apply
   buffStacks?: number; // Stacks to apply (defaults to 1 if not specified)
-}
-
-/**
- * Defines the static properties of a card
- */
-export interface CardDefinition {
-  id: string; // Unique identifier, used for image name (e.g., "strike")
-  name: string;
-  cost: number;
-  description: string;
-  // image: string; // Removed - derive from id
-  effects: CardEffect[]; // Changed from Record<string, ...> to CardEffect[]
 }
 
 /**
@@ -34,12 +29,6 @@ export interface Buff {
   stacks: number; // How many times the buff is stacked
   // Potentially add: onApply, onTurnEnd, onTurnStart effect triggers
 }
-
-/**
- * Defines the static properties of a buff/debuff.
- * Used in GameConfig and loaded from data/buffs.ts.
- */
-export type BuffDefinition = Omit<Buff, 'stacks' | 'duration'>;
 
 /**
  * Base state for any entity participating in combat.
@@ -57,16 +46,23 @@ export interface CombatantState {
 }
 
 /**
+ * Represents a unique instance of a card in a player's deck, discard, or as the next card.
+ */
+export interface CardInstance {
+  cardId: string; // The ID linking to the CardDefinition
+  instanceId: string; // A unique identifier for this specific instance
+}
+
+/**
  * Represents the state of the player
  */
 export interface PlayerState extends CombatantState {
   energy: number;
   maxEnergy: number;
-  deck: string[]; // Array of card IDs
-  hand: CardDefinition[]; // Currently unused in auto-play model
-  discard: string[]; // Array of card IDs
-  nextCard: string | null; // <<< CHANGED: Should store the ID of the next card, not the full definition
-  allCards: string[]; // All card IDs owned by the player
+  deck: CardInstance[]; // Array of card instances
+  discard: CardInstance[]; // Array of card instances
+  nextCard: CardInstance | null; // The specific instance of the next card to be played
+  allCards: string[]; // All card *definition* IDs owned by the player
   // id and name inherited from CombatantState
 }
 
@@ -80,17 +76,11 @@ export interface EnemyState extends CombatantState {
 }
 
 /**
- * Defines the static properties of an enemy type (used for instantiation)
- */
-export type EnemyDefinition = Omit<
-  EnemyState,
-  'hp' | 'block' | 'momentum' | 'buffs' // Omit dynamic combat state
->;
-
-/**
  * Represents the overall state of a single player's game session.
  */
 export interface GameState {
+  gameId: string; // Added gameId
+  playerId: string; // Added playerId
   floor: number;
   phase: 'pre_battle' | 'fighting' | 'reward' | 'gameOver';
   turn: 'player' | 'enemy';
@@ -100,6 +90,7 @@ export interface GameState {
   currentRewardSet: number;
   currency: number;
   lastEnemyCardPlayedId: string | null; // ID of the last card the enemy played
+  logs?: string[]; // Optional action logs
 }
 
 /**
@@ -107,17 +98,43 @@ export interface GameState {
  * Includes definitions for all cards, enemies, and core game constants.
  */
 export interface GameConfig {
-  // Core Game Constants (Values typically loaded from config.ts)
+  // Use the imported types directly
+  cards: Record<string, CardDefinition>;
+  enemies: Record<string, EnemyDefinition>;
+  buffs: Record<string, BuffDefinition>;
+
+  // Player Stats (ensure these match the keys in config.ts or the constructed object in index.ts)
   PLAYER_MAX_HP: number;
   PLAYER_START_ENERGY: number;
-  MOMENTUM_PER_CARD: number;
-  REWARD_CHOICES_COUNT: number; // How many cards per reward set
-  REWARD_SETS: number; // How many sets of rewards are offered
+  PLAYER_START_MOMENTUM_MAX: number; // Make sure this key exists in your config/construction
+  PLAYER_STARTING_DECK: string[]; // Changed from PLAYER_START_DECK
 
-  // Game Data Definitions
-  cards: Record<string, CardDefinition>;
-  enemies: Record<string, EnemyDefinition>; // Changed Omit<...> to EnemyDefinition
-  buffs: Record<string, BuffDefinition>; // Definitions for buffs/debuffs - Changed Omit<...> to BuffDefinition
+  // Gameplay Mechanics
+  STARTING_HAND_SIZE: number;
+  NEXT_CARD_DRAWN_ON_SHUFFLE: boolean;
+  MOMENTUM_PER_CARD: number;
+  MOMENTUM_PER_ZERO_COST_CARD: number;
+  MOMENTUM_PER_SHUFFLE: number;
+
+  // Rewards
+  REWARD_CHOICES_COUNT: number; // Changed from REWARD_CHOICES
+  REWARD_SETS: number;
+
+  // Animation Timings (ensure these match the keys in config.ts or construction)
+  CARD_ANIMATION_DELAY_MS: number;
+  CARD_ANIMATION_DURATION_MS: number;
+
+  // Ensure these were intended to be part of the config sent to client
+  // If not, remove them here. If yes, ensure they are added during construction in index.ts.
+  // MAX_MOMENTUM: number;
+  // CURRENCY_PER_FLOOR: number;
+
+  // Add missing nested ANIMATION_SPEEDS if it should be part of GameConfig
+  // ANIMATION_SPEEDS: {
+  //     CARD_PLAY: number;
+  //     ENEMY_TURN: number;
+  //     SHUFFLE: number;
+  // };
 }
 
 /**
@@ -146,3 +163,8 @@ export type GameActionType = keyof typeof GAME_ACTIONS;
 
 // Types related to the GamesFun SDK interaction (if needed)
 // e.g., ActionRequest, ActionResult 
+
+export interface ActionResult {
+    success: boolean;
+    message?: string;
+} 

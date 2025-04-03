@@ -30,15 +30,41 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 // --- Game Configuration Loading ---
-// Construct the full GameConfig object
+// Construct the full GameConfig object *manually* from the nested constants
+// and data imports to match the flat GameConfig interface.
 const gameConfig: GameConfig = {
-  // Spread the constants from config.ts
-  ...gameConfigConstants,
-  // Add card and enemy definitions
+  // Data definitions
   cards: cards,
   enemies: enemies,
-  // Add buff definitions (assuming an empty object for now, update if buffs.ts exists)
   buffs: buffs,
+
+  // Player Stats (map from nested constants)
+  PLAYER_MAX_HP: gameConfigConstants.PLAYER_MAX_HP,
+  PLAYER_START_ENERGY: gameConfigConstants.PLAYER_START_ENERGY,
+  PLAYER_START_MOMENTUM_MAX: gameConfigConstants.PLAYER_START_MOMENTUM_MAX,
+  PLAYER_STARTING_DECK: gameConfigConstants.PLAYER_STARTING_DECK,
+
+  // Gameplay Mechanics (map from nested constants)
+  STARTING_HAND_SIZE: gameConfigConstants.STARTING_HAND_SIZE,
+  NEXT_CARD_DRAWN_ON_SHUFFLE: gameConfigConstants.NEXT_CARD_DRAWN_ON_SHUFFLE,
+  MOMENTUM_PER_CARD: gameConfigConstants.MOMENTUM_PER_CARD,
+  MOMENTUM_PER_ZERO_COST_CARD: gameConfigConstants.MOMENTUM_PER_ZERO_COST_CARD,
+  MOMENTUM_PER_SHUFFLE: gameConfigConstants.MOMENTUM_PER_SHUFFLE,
+
+  // Rewards (map from nested constants)
+  REWARD_CHOICES_COUNT: gameConfigConstants.REWARD_CHOICES_COUNT,
+  REWARD_SETS: gameConfigConstants.REWARD_SETS,
+
+  // Animation Timings (map from nested constants)
+  CARD_ANIMATION_DELAY_MS: gameConfigConstants.CARD_ANIMATION_DELAY_MS,
+  CARD_ANIMATION_DURATION_MS: gameConfigConstants.CARD_ANIMATION_DURATION_MS,
+
+  // Add nested ANIMATION_SPEEDS if it's part of GameConfig type
+  // ANIMATION_SPEEDS: gameConfigConstants.ANIMATION_SPEEDS,
+
+  // Add MAX_MOMENTUM and CURRENCY_PER_FLOOR if they should be part of GameConfig
+  // MAX_MOMENTUM: 10, // Example: Get from constants if defined there
+  // CURRENCY_PER_FLOOR: 100, // Example: Get from constants if defined there
 };
 
 // --- Instantiate Game Manager ---
@@ -308,14 +334,14 @@ wss.on('connection', (ws) => {
 
         // Get initial state and config (uses temporary state if new player)
         const initialState: GameState = gameManager.getState(playerId);
-        const configToSend: GameConfig = gameConfig; // Use the already loaded gameConfig
+        const configToSend: GameConfig = gameConfig; // Use the constructed flat gameConfig object
 
         // Send 'init' message back to the client
         const initMessage = {
           type: 'init',
           payload: {
             gameState: initialState,
-            gameConfig: configToSend,
+            gameConfig: configToSend, // Send the correct config object
           },
         };
         ws.send(JSON.stringify(initMessage));

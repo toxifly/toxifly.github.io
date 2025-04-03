@@ -8,9 +8,12 @@ import {
   ActionRequest,
   Buff,
   BuffDefinition,
+  CardEffect,
+  CardInstance,
 } from './types';
 // Import the actual config constants now needed for initialization logic
 import { config as gameConfigConstants } from './config';
+import { randomUUID } from 'crypto'; // Import for generating gameId
 
 /**
  * Manages the game state and logic for multiple players.
@@ -85,13 +88,14 @@ export class DefaultGameManager {
         if (state.turn !== 'player') {
           return { success: false, message: "Not player's turn." };
         }
-        const cardToPlayId = player.nextCard;
-        if (!cardToPlayId) {
-          return { success: false, message: 'No card ready to play.' };
+        const cardToPlayInstance = player.nextCard;
+        if (!cardToPlayInstance) {
+          return { success: false, message: 'No card instance ready to play.' };
         }
+        const cardToPlayId = cardToPlayInstance.cardId;
         const cardToPlayDefinition = this.config.cards[cardToPlayId];
         if (!cardToPlayDefinition) {
-            console.error(`Action 'autoPlayCard': Card definition not found for ID: ${cardToPlayId}`);
+            console.error(`Action 'autoPlayCard': Card definition not found for ID: ${cardToPlayId} (Instance ID: ${cardToPlayInstance.instanceId})`);
             player.nextCard = null;
             return { success: false, message: `Internal error: Card definition not found for ID ${cardToPlayId}.` };
         }
@@ -101,13 +105,13 @@ export class DefaultGameManager {
             message: `Not enough energy to play ${cardToPlayDefinition.name} (Cost: ${cardToPlayDefinition.cost}, Have: ${player.energy}).`,
           };
         }
-        console.log(`Action 'autoPlayCard' (${cardToPlayDefinition.name}) validated. Executing...`);
+        console.log(`Action 'autoPlayCard' (${cardToPlayDefinition.name}, Instance: ${cardToPlayInstance.instanceId}) validated. Executing...`);
 
         player.energy -= cardToPlayDefinition.cost;
         console.log(`Player ${playerId} spent ${cardToPlayDefinition.cost} energy. Remaining: ${player.energy}`);
 
         let primaryTarget: CombatantState = player;
-        if (cardToPlayDefinition.effects.some(e => e.type === 'damage')) {
+        if (cardToPlayDefinition.effects.some((e: CardEffect) => e.type === 'damage')) {
             primaryTarget = enemy;
         }
         console.log(`Applying effects of ${cardToPlayDefinition.name}. Caster: Player, Primary Target: ${primaryTarget.name ?? primaryTarget.id}`);
@@ -119,33 +123,35 @@ export class DefaultGameManager {
         player.momentum += momentumToAdd;
         console.log(`Player ${playerId} gained ${momentumToAdd} momentum. Total: ${player.momentum}`);
 
-        player.discard.push(cardToPlayId);
+        player.discard.push(cardToPlayInstance);
         player.nextCard = null;
-        console.log(`Card ${cardToPlayDefinition.name} (ID: ${cardToPlayId}) moved to discard. Discard size: ${player.discard.length}`);
+        console.log(`Card ${cardToPlayDefinition.name} (ID: ${cardToPlayId}, Instance: ${cardToPlayInstance.instanceId}) moved to discard. Discard size: ${player.discard.length}`);
 
         this.drawCard(player);
-
         this.checkCombatEnd(state);
 
         let endTurn = false;
         let reason = "";
         if (state.phase === 'fighting') {
-            const nextCardId = player.nextCard;
-            if (!nextCardId) {
-                endTurn = true;
-                reason = "No card drawn.";
-            } else {
+            const nextCardInstance = player.nextCard as CardInstance | null;
+
+            if (nextCardInstance) {
+                const nextCardId = nextCardInstance.cardId;
                 const nextCardDef = this.config.cards[nextCardId];
                 if (!nextCardDef) {
                     endTurn = true;
-                    reason = `Could not find definition for next card ID: ${nextCardId}.`;
+                    reason = `Could not find definition for next card ID: ${nextCardId} (Instance: ${nextCardInstance.instanceId}).`;
                     console.error(`GameManager Error: ${reason}`);
                 } else if (player.energy < nextCardDef.cost) {
                     endTurn = true;
-                    reason = `Cannot afford next card '${nextCardDef.name}' (Cost: ${nextCardDef.cost}, Have: ${player.energy}).`;
+                    reason = `Cannot afford next card '${nextCardDef.name}' (Cost: ${nextCardDef.cost}, Have: ${player.energy}, Instance: ${nextCardInstance.instanceId}).`;
                 } else {
-                    console.log(`Player ${playerId} turn continues. Can afford next card '${nextCardDef.name}' (Cost: ${nextCardDef.cost}, Have: ${player.energy}).`);
+                    console.log(`Player ${playerId} turn continues. Can afford next card '${nextCardDef.name}' (Cost: ${nextCardDef.cost}, Have: ${player.energy}, Instance: ${nextCardInstance.instanceId}).`);
+                    endTurn = false;
                 }
+            } else {
+                endTurn = true;
+                reason = "No card instance drawn.";
             }
 
             if (endTurn) {
@@ -202,9 +208,10 @@ export class DefaultGameManager {
                  console.error(`Invalid card definition found in reward set ${currentRewardSetIndex}, index ${cardIndex}`);
             } else {
                  const chosenCardId = chosenCardDefinition.id;
-                 player.discard.push(chosenCardId);
                  player.allCards.push(chosenCardId);
-                 console.log(`Player ${playerId} added ${chosenCardDefinition.name} (ID: ${chosenCardId}) to discard pile and allCards list.`);
+                 const newCardInstance: CardInstance = { cardId: chosenCardId, instanceId: randomUUID() };
+                 player.discard.push(newCardInstance);
+                 console.log(`Player ${playerId} added ${chosenCardDefinition.name} (ID: ${chosenCardId}) to allCards list. Added new instance (Instance: ${newCardInstance.instanceId}) to discard pile.`);
             }
         } else {
             console.log(`Player ${playerId} skipped reward set ${currentRewardSetIndex + 1}.`);
@@ -221,9 +228,8 @@ export class DefaultGameManager {
             state.phase = 'fighting';
             this.startNewFight(state);
             this.drawCard(player);
-            const nextCardId = player.nextCard;
-            const nextCardName = nextCardId ? this.config.cards[nextCardId]?.name : 'None';
-            console.log(`Phase set to 'fighting'. Next fight setup. First card drawn: ${nextCardName}`);
+            const nextCardInfo = player.nextCard ? `${this.config.cards[player.nextCard.cardId]?.name} (Instance: ${player.nextCard.instanceId})` : 'None';
+            console.log(`Phase set to 'fighting'. Next fight setup. First card drawn: ${nextCardInfo}`);
         } else {
             console.log(`Moving to next reward set (${state.currentRewardSet}/${gameConfigConstants.REWARD_SETS}). Target next index: ${state.currentRewardSet}`);
         }
@@ -240,9 +246,8 @@ export class DefaultGameManager {
 
         state.phase = 'fighting';
         this.drawCard(player);
-        const nextCardId = player.nextCard;
-        const nextCardName = nextCardId ? this.config.cards[nextCardId]?.name : 'None';
-        console.log(`Phase changed to 'fighting'. First card drawn: ${nextCardName}`);
+        const nextCardInfo = player.nextCard ? `${this.config.cards[player.nextCard.cardId]?.name} (Instance: ${player.nextCard.instanceId})` : 'None';
+        console.log(`Phase changed to 'fighting'. First card drawn: ${nextCardInfo}`);
 
         this.setState(playerId, state);
 
@@ -439,7 +444,7 @@ export class DefaultGameManager {
   /**
    * Sets up the game state for the start of a new fight (e.g., next floor).
    * Selects an enemy based on the floor number and resets its state.
-   * **Resets the player's deck using their full `allCards` list and shuffles it.**
+   * **Resets the player's deck using their full `allCards` list, creating new CardInstances, and shuffles it.**
    * @param gameState The current game state to modify.
    */
   startNewFight(gameState: GameState): void {
@@ -473,7 +478,7 @@ export class DefaultGameManager {
       momentum: 0,
       buffs: [],
       maxEnergy: enemyDefinition.maxEnergy,
-      deck: enemyDefinition.deck.map(id => id.toLowerCase()),
+      deck: enemyDefinition.deck.map((id: string) => id.toLowerCase()),
       description: enemyDefinition.description,
     };
 
@@ -482,7 +487,10 @@ export class DefaultGameManager {
 
     const player = gameState.player;
     console.log(`Resetting player deck for new fight using ${player.allCards.length} cards from allCards.`);
-    player.deck = [...player.allCards];
+    player.deck = player.allCards.map(cardId => ({
+        cardId: cardId,
+        instanceId: randomUUID()
+    }));
     player.discard = [];
     player.nextCard = null;
 
@@ -494,14 +502,7 @@ export class DefaultGameManager {
     player.energy = player.maxEnergy;
     console.log(`Player energy reset to max: ${player.energy}/${player.maxEnergy}`);    
 
-    let currentIndex = player.deck.length;
-    let randomIndex: number;
-    while (currentIndex !== 0) {
-        randomIndex = Math.floor(Math.random() * currentIndex);
-        currentIndex--;
-        [player.deck[currentIndex], player.deck[randomIndex]] = [
-        player.deck[randomIndex], player.deck[currentIndex]];
-    }
+    this.shuffleDeck(player);
     console.log(`Player deck reset and shuffled. Draw pile size: ${player.deck.length}, Discard pile size: ${player.discard.length}`);
 
     console.log(`New fight started against ${gameState.enemy.name}. State updated.`);
@@ -582,6 +583,12 @@ export class DefaultGameManager {
         }
     });
 
+    // Create initial deck instances directly from startingDeckIds
+    const initialDeckInstances: CardInstance[] = startingDeckIds.map((cardId: string) => ({ // Add type string here
+        cardId: cardId,
+        instanceId: randomUUID()
+    }));
+
     const playerState: PlayerState = {
       id: playerId,
       name: 'Player',
@@ -592,11 +599,11 @@ export class DefaultGameManager {
       buffs: [],
       energy: this.config.PLAYER_START_ENERGY,
       maxEnergy: this.config.PLAYER_START_ENERGY,
-      deck: [...startingDeckIds],
-      hand: [],
+      // Use the pre-created initialDeckInstances
+      deck: initialDeckInstances,
       discard: [],
       nextCard: null,
-      allCards: [...startingDeckIds],
+      allCards: [...startingDeckIds], // allCards is correct here
     };
 
     const enemyIds = Object.keys(this.config.enemies);
@@ -615,11 +622,16 @@ export class DefaultGameManager {
       momentum: 0,
       buffs: [],
       maxEnergy: enemyDefinition.maxEnergy,
-      deck: enemyDefinition.deck.map(id => id.toLowerCase()),
+      deck: enemyDefinition.deck.map((id: string) => id.toLowerCase()),
       description: enemyDefinition.description,
     };
 
+    const gameId = randomUUID(); // Generate a unique game ID
+    console.log(`Generated Game ID: ${gameId}`);
+
     const initialGameState: GameState = {
+      gameId: gameId,       // ADD gameId
+      playerId: playerId,   // ADD playerId
       floor: 1,
       phase: 'pre_battle',
       turn: 'player',
@@ -631,9 +643,9 @@ export class DefaultGameManager {
       lastEnemyCardPlayedId: null,
     };
 
-    console.log(`Player ${playerId}: Initial deck before shuffle:`, [...initialGameState.player.deck]);
+    console.log(`Player ${playerId}: Initial deck before shuffle:`, JSON.stringify(initialGameState.player.deck.map(c => ({ id: c.cardId, inst: c.instanceId }))));
     this.shuffleDeck(initialGameState.player);
-    console.log(`Player ${playerId}: Initial deck after shuffle:`, [...initialGameState.player.deck]);
+    console.log(`Player ${playerId}: Initial deck after shuffle:`, JSON.stringify(initialGameState.player.deck.map(c => ({ id: c.cardId, inst: c.instanceId }))));
 
     console.log("Initial game state created (pre_battle phase).");
     return initialGameState;
@@ -641,8 +653,7 @@ export class DefaultGameManager {
 
   /**
    * Draws the next card for the player, shuffling the discard pile into the deck if necessary.
-   * Sets the `playerState.nextCard`. Adds momentum if a shuffle occurs.
-   * Implements Step 25 logic.
+   * Sets the `playerState.nextCard` with a `CardInstance`. Adds momentum if a shuffle occurs.
    * @param playerState The player state to modify.
    */
   private drawCard(playerState: PlayerState): void {
@@ -661,31 +672,29 @@ export class DefaultGameManager {
       }
     }
 
-    const nextCardId = playerState.deck.shift();
+    const nextCardInstance = playerState.deck.shift();
 
-    if (!nextCardId) {
-      console.error(`Player ${playerId}: Tried to draw card but ID was undefined after length check.`);
+    if (!nextCardInstance) {
+      console.error(`Player ${playerId}: Tried to draw card instance but it was undefined after length check.`);
       playerState.nextCard = null;
       return;
     }
 
-    const nextCardDefinition = this.config.cards[nextCardId];
+    const nextCardDefinition = this.config.cards[nextCardInstance.cardId];
 
     if (!nextCardDefinition) {
-      console.error(`Player ${playerId}: Could not find card definition for ID: ${nextCardId}`);
+      console.error(`Player ${playerId}: Could not find card definition for ID: ${nextCardInstance.cardId} (Instance: ${nextCardInstance.instanceId})`);
       playerState.nextCard = null;
       return;
     }
 
-    playerState.nextCard = nextCardId;
-    console.log(`Player ${playerId} drew next card: ${nextCardDefinition.name} (ID: ${nextCardId}). Deck size: ${playerState.deck.length}`);
+    playerState.nextCard = nextCardInstance;
+    console.log(`Player ${playerId} drew next card: ${nextCardDefinition.name} (ID: ${nextCardInstance.cardId}, Instance: ${nextCardInstance.instanceId}). Deck size: ${playerState.deck.length}`);
   }
 
   /**
-   * Shuffles the player's discard pile back into their deck.
+   * Shuffles the player's discard pile (CardInstance[]) back into their deck (CardInstance[]).
    * If the discard pile is empty, it shuffles the existing deck.
-   * Called when the draw pile (`playerState.deck`) is empty during combat,
-   * OR during initialization to shuffle the starting deck.
    * @param playerState The player state to modify.
    */
   private shuffleDeck(playerState: PlayerState): void {
@@ -697,7 +706,7 @@ export class DefaultGameManager {
              return;
         }
     } else {
-        console.log(`Player ${playerState.id}: Shuffling ${playerState.discard.length} cards from discard into deck (current deck size: ${playerState.deck.length}).`);
+        console.log(`Player ${playerState.id}: Shuffling ${playerState.discard.length} card instances from discard into deck (current deck size: ${playerState.deck.length}).`);
         playerState.deck = [...playerState.deck, ...playerState.discard];
         playerState.discard = [];
     }
@@ -788,14 +797,18 @@ export class DefaultGameManager {
     if (!enemy.deck || enemy.deck.length === 0) {
       console.log(`Enemy ${enemy.name} has no actions defined in deck. Ending turn.`);
     } else {
-      const cardIdToPlay = enemy.deck[0];
-      const cardToPlay = this.config.cards[cardIdToPlay.toLowerCase()];
+      // Enemy deck contains string IDs, not CardInstances
+      const cardIdToPlay = enemy.deck[0]; // This is just a string ID
+      // Look up the definition using the string ID
+      const cardToPlay = this.config.cards[cardIdToPlay.toLowerCase()]; // Ensure lowercase lookup if needed
 
       if (!cardToPlay) {
+         // Use the string ID directly in the error message
         console.error(`Enemy ${enemy.name} tried to play card with unknown ID: ${cardIdToPlay}. Ending turn.`);
       } else {
         console.log(`Enemy ${enemy.name} plays card: ${cardToPlay.name}`);
-        gameState.lastEnemyCardPlayedId = cardToPlay.id;
+        // Store the definition ID (string)
+        gameState.lastEnemyCardPlayedId = cardToPlay.id; // Store the actual definition ID found
         console.log(`  > Set lastEnemyCardPlayedId to: ${gameState.lastEnemyCardPlayedId}`);
         this.applyCardEffects(cardToPlay, enemy, player, gameState);
       }

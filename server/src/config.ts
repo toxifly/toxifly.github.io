@@ -29,6 +29,10 @@ export const config = {
 
     // Other constants can be added here as needed
     // e.g., FLOOR_SCALING_FACTOR, specific buff durations, etc.
+
+    // NEW: Animation Timings
+    CARD_ANIMATION_DELAY_MS: 1000, // Delay before card play animation starts (ms)
+    CARD_ANIMATION_DURATION_MS: 700, // Duration of the card play animation (ms)
 };
 
 // Type definition for the config object (optional but good practice)
