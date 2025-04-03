@@ -4,13 +4,19 @@ import { SDKOptions } from '@games-fun/sdk'
 import { GameProvider } from './context/GameContext'
 import Game from './Game'
 
-// Define the SDKOptions
-// TODO: Move gameServerUrl to environment variables
+// --- Determine Server URL based on environment ---
+const productionServerUrl = 'https://momentum-rogue.onrender.com/api/validate-action';
+const localServerUrl = 'http://localhost:3001/api/validate-action';
+
+// Use local URL in development, production URL otherwise
+const gameServerUrl = import.meta.env.DEV ? localServerUrl : productionServerUrl;
+
+// --- Define the SDKOptions ---
 const sdkOptions: SDKOptions = {
-  gameServerUrl: 'http://localhost:3001/api/validate-action',
-  debug: true,
+  gameServerUrl: gameServerUrl, // Use the determined URL
+  debug: import.meta.env.DEV, // Enable debug only in development
   dev: {
-    enabled: true,
+    enabled: import.meta.env.DEV, // Enable dev features only in development
   },
 }
 
