@@ -20,7 +20,6 @@ A web-based card game.
     cd ../client
     npm install # Installs React, Vite, GamesFun SDK, etc.
     ```
-
 ## Running the Application
 
 1.  **Start the Server:**
