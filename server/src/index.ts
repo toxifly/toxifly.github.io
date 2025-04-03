@@ -385,8 +385,8 @@ wss.on('connection', (ws) => {
 });
 
 // Start the server
-server.listen(Number(port), '0.0.0.0', () => {
-  console.log(`Server listening on port ${port} on host 0.0.0.0`);
+server.listen(Number(port), () => {
+  console.log(`Server listening on port ${port}`);
 });
 
 // Export the server and app for potential future use (e.g., testing)
