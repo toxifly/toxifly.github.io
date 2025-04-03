@@ -8,6 +8,8 @@ Update this file every time you edit something or you notice that the content is
 ## File Structure
 .
 ├── client/ # Frontend React application (Vite) - Responsible for displaying the game state received from the server and sending user actions back.
+│   ├── .env.development # Environment variables for local development (e.g., API/WS URLs, disable iframe check).
+│   ├── .env.production # Environment variables for production builds (used by default, overridden by hosting provider env vars).
 │   ├── node_modules/ # Project dependencies for the client (React, Vite plugins, etc.).
 │   ├── public/ # Static assets accessible directly by the browser (e.g., favicon, initial images, enemy backgrounds, card images, buff icons).
 │   │   ├── images/
@@ -17,7 +19,7 @@ Update this file every time you edit something or you notice that the content is
 │   │   │   └── enemies/ # Enemy sprites (e.g., goblin.png)
 │   │   └── ... (other public assets)
 │   ├── src/    # Client-side source code (React components, context providers, API/WebSocket communication logic, styles).
-│   │   ├── App.tsx # The main application component. **Defines the `gameServerUrl` based on the environment (`import.meta.env.DEV`) - uses `localServerUrl` ('http://localhost:3001/api/validate-action') in development and `productionServerUrl` (your deployed server URL) in production.** Sets `SDKOptions` (including the dynamic `gameServerUrl`, and enabling `debug` and `dev` flags only in development). Wraps the application with `GamesFunProvider` and `GameProvider`.
+│   │   ├── App.tsx # The main application component. **Reads API URL (`VITE_API_URL`) and iframe bypass flag (`VITE_DISABLE_IFRAME_CHECK`) from environment variables. Constructs the `gameServerUrl` for the SDK. Sets `SDKOptions`, enabling `debug` and `dev` flags if `import.meta.env.DEV` is true OR if `VITE_DISABLE_IFRAME_CHECK` is set to 'true' (allowing iframe bypass in production builds for testing).** Wraps the application with `GamesFunProvider` and `GameProvider`.
 │   │   ├── Game.tsx # Renders the game interface (`GameUI`, `RewardScreen`), manages loading/error states, uses `useGame` and `useGamesFunActions`. **Includes a `useEffect` hook (dependent on `gameState`, `gameConfig`, `actions`) to automatically schedule the player's next card play (`actions.autoPlayCard`) using `setTimeout`. It extracts the `cardId` from `gameState.player.nextCard` (which is a `CardInstance`) to look up the `CardDefinition` and check energy cost. The timeout duration is dynamically calculated based on `gameConfig.CARD_ANIMATION_DELAY_MS` + `gameConfig.CARD_ANIMATION_DURATION_MS` + a small buffer (e.g., 200ms). Uses `useRef`s (`gameStateRef`, `timeoutRef`) for state checks within the timeout callback (comparing `instanceId`s) and concurrency management.**
 │   │   ├── components/ # Reusable UI components.
 │   │   │   ├── GameUI.tsx # Displays the main fighting/pre-battle UI (Floor, Enemy, Player, Cards). Fetches `gameConfig` via `useGame`. Looks up `CardDefinition` for the playable card using the `cardId` from `player.nextCard` (a `CardInstance`) and for the preview card using the `cardId` from `player.deck[0]` (a `CardInstance`). **Includes a `previousCardId` state and a `useEffect` hook to track changes to the `nextDrawCardId`.** Renders `CardDisplay` for playable card (using `key={'card-' + playableCardInstance?.instanceId ?? 'empty'}`) and next draw preview **(using `key={'preview-' + nextDrawCardInstance?.instanceId ?? 'empty'}`). Passes animation timing props (`animationDelay`, `animationDuration`) and the `instanceId` from the playable card instance to the playable `CardDisplay`. Passes the `previousCardId` state to the preview `CardDisplay`.** Derives `maxMomentum` from `gameConfig`.
@@ -36,7 +38,7 @@ Update this file every time you edit something or you notice that the content is
 │   │   │   ├── DeckView.tsx # Modal for displaying a list of cards passed via the `deck` prop (array of card IDs). Fetches `CardDefinition` for each ID from `gameConfig`. Renders each card using `CardDisplay`, passing `instanceId={null}`. Needs dark theme update. Uses `DeckView.module.css`.
 │   │   │   └── DeckView.module.css # Styles for `DeckView`.
 │   │   ├── context/ # React context providers.
-│   │   │   └── GameContext.tsx # Manages WebSocket connection, state, config updates.
+│   │   │   └── GameContext.tsx # Manages WebSocket connection, state, config updates. **Reads WebSocket URL (`VITE_WS_URL`) from environment variables.** Uses `useGamesFun` to get `privyId`. Connects via WebSocket, handles 'register', 'init', 'state_update', 'error' messages. Provides `gameState`, `gameConfig`, `isConnected`, `error`, and `sendMessage` via context.
 │   │   └── ... (other client files)
 │   ├── styles/ # Global styles or theme configuration.
 │   │   └── App.css # Global CSS. Styles `#root`, layout classes (`.game-ui-container`, `.card-area`, etc.).

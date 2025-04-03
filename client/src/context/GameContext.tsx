@@ -2,6 +2,14 @@ import React, { createContext, useState, useContext, ReactNode, useCallback, use
 import { useGamesFun } from '@games-fun/react'; // Assuming this is the correct import path
 import type { GameState, GameConfig } from '../../../server/src/types';
 
+// --- Get WebSocket URL from environment variables ---
+const wsUrlFromEnv = import.meta.env.VITE_WS_URL;
+
+// Check if required variable is set
+if (!wsUrlFromEnv) {
+  throw new Error("Missing environment variable: VITE_WS_URL");
+}
+
 // Define the shape of the context state
 interface GameContextState {
     gameState: GameState | null;
@@ -35,13 +43,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     useEffect(() => {
         // Don't connect if SDK is still initializing or no privyId
         if (!connection?.privyId || isInitializing) {
-            console.log("WebSocket: Waiting for connection/privyId...");
+            console.log("WebSocket: Waiting for connection/privyId...", { hasPrivyId: !!connection?.privyId, isInitializing });
             return;
         }
 
         const playerId = connection.privyId;
-        // TODO: Make WebSocket URL configurable, potentially derive from gamesFunOptions.gameServerUrl
-        const wsUrl = 'ws://localhost:3001'; // Assuming WS runs on the same host/port as HTTP
+        // Use the WebSocket URL from the environment variable
+        const wsUrl = wsUrlFromEnv;
         console.log(`WebSocket: Attempting to connect to ${wsUrl} for player ${playerId}`);
         setError(null); // Clear previous errors on new connection attempt
 
