@@ -23,6 +23,13 @@ app.use(cors());
 // Add middleware to parse JSON request bodies
 app.use(express.json());
 
+// --- Health Check Route ---
+// Add this route handler
+app.get('/healthz', (req, res) => {
+  res.status(200).send('OK');
+});
+// --- End Health Check ---
+
 // Create an HTTP server
 const server = http.createServer(app);
 
@@ -385,8 +392,8 @@ wss.on('connection', (ws) => {
 });
 
 // Start the server
-server.listen(Number(port), () => {
-  console.log(`Server listening on port ${port}`);
+server.listen(Number(port), '0.0.0.0', () => {
+  console.log(`Server listening on port ${port} on host 0.0.0.0`);
 });
 
 // Export the server and app for potential future use (e.g., testing)
