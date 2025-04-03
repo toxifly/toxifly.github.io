@@ -34,10 +34,12 @@ const GameUI: React.FC<GameUIProps> = ({ gameState }) => {
 
     // Track when card changes to trigger fade effect
     useEffect(() => {
-        if (nextDrawCardId !== previousCardId) {
-            setPreviousCardId(nextDrawCardId);
+        // Ensure we pass null if nextDrawCardId is undefined
+        const currentCardId = nextDrawCardId ?? null;
+        if (currentCardId !== previousCardId) {
+            setPreviousCardId(currentCardId);
         }
-    }, [nextDrawCardId]);
+    }, [nextDrawCardId, previousCardId]); // Add previousCardId to dependency array
 
     // --- Add Logging ---
     console.log(`[GameUI Render] Playable Instance ID: ${playableCardInstance?.instanceId ?? 'null'}, Def ID: ${playableCardId ?? 'null'}, Def Found: ${!!playableCardDefinition}, Turn: ${gameState.turn}`);

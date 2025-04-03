@@ -43,7 +43,7 @@ const DeckView: React.FC<DeckViewProps> = ({ deck, gameConfig, onClose }) => {
                             }
                             return (
                                 <div key={`${cardId}-${index}`} className={styles.cardWrapper}>
-                                    <CardDisplay card={cardDef} isNextCard={false} isBeingPlayed={false} />
+                                    <CardDisplay card={cardDef} instanceId={null} isNextCard={false} />
                                 </div>
                             );
                         })

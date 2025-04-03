@@ -62,7 +62,7 @@ const RewardScreen: React.FC = () => {
                         onClick={() => handleSelectReward(index)}
                         style={styles.cardWrapper}
                     >
-                        <CardDisplay card={card} />
+                        <CardDisplay card={card} instanceId={null} />
                     </div>
                 ))}
             </div>
