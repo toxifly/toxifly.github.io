@@ -49,28 +49,20 @@ Update this file every time you edit something or you notice that the content is
 ├── server/ # Backend Node.js application - Manages game logic, state, action validation, WebSocket communication.
 │   ├── node_modules/ # Server dependencies.
 │   ├── src/ # Server-side source code (TypeScript).
-│   │   ├── config.ts # Stores static game configuration constants (e.g., player stats, momentum values, reward counts, **animation timings `CARD_ANIMATION_DELAY_MS`, `CARD_ANIMATION_DURATION_MS`**).
+│   │   ├── api/
+│   │   │   └── routes.ts # **Defines and registers all Express API route handlers (`/healthz`, `/api/config`, `/api/state/:playerId`, `/api/validate-action`). Handles request validation, calls `gameManager`, and triggers WebSocket broadcasts via `activeConnections`.**
+│   │   ├── config/
+│   │   │   └── gameConfig.ts # **Loads constants from `../config.ts` and data definitions (`cards`, `enemies`, `buffs`). Constructs the flat `GameConfig` object used throughout the server and sent to the client.**
 │   │   ├── data/ # Contains static data definitions for game elements.
-│   │   │   ├── cards.ts # **Defines and exports the `CardDefinition` interface.** Defines all available cards, including cost, effects (`CardEffect[]`), description. Exports a `cards` object mapping card IDs to `CardDefinition`. **Does NOT import `CardDefinition` from `types.ts`.** May import shared types like `CardEffect` from `types.ts`.
-│   │   │   ├── enemies.ts # **Defines and exports the `EnemyDefinition` interface.** Defines base stats and decks for enemies. Exports an `enemies` object. **Does NOT import `EnemyDefinition` from `types.ts`.**
-│   │   │   └── buffs.ts # **Defines and exports the `BuffDefinition` interface.** Defines static properties for buffs. Exports a `buffs` object. **Does NOT import `BuffDefinition` from `types.ts`.**
-│   │   ├── types.ts # Contains shared TypeScript types. **Crucially, it RE-EXPORTS types like `CardDefinition`, `EnemyDefinition`, `BuffDefinition` using `export type { ... } from './data/...'`.** Defines shared interfaces like `CardEffect`, `Buff`, `CombatantState`, `PlayerState`, `EnemyState`, `GameState`, `GameConfig`, `ActionRequest`, **and the `CardInstance` interface (`{ cardId: string, instanceId: string }`)**. `GameState` includes `gameId` and `playerId`. **`PlayerState`'s `deck`, `discard`, and `nextCard` properties now hold `CardInstance[]` or `CardInstance | null`. `PlayerState.allCards` remains `string[]`.** `EnemyState.deck` remains `string[]`. `GameConfig` includes animation timing constants.
-│   │   ├── gameManager.ts # Implements the core game logic (`DefaultGameManager`). Holds `playerStates`.
-│   │   │   - `getState(playerId)`: Retrieves or initializes `GameState`.
-│   │   │   - `setState(playerId, state)`: Updates stored `GameState`.
-│   │   │   - `validateAction(playerId, action)`: Validates and processes actions ('autoPlayCard', 'selectReward', 'startBattle', 'newGame'). Handles game flow logic. **For 'autoPlayCard', it checks energy against the cost from the `CardDefinition` (using `nextCard.cardId`), applies effects, pushes the `CardInstance` to discard, draws the next `CardInstance`, and checks if the player can afford the *next* card instance to determine if the turn ends.** For 'selectReward', adds the chosen definition ID to `player.allCards` and pushes a *new* `CardInstance` to `player.discard`.
-│   │   │   - `applyCardEffects(cardDef, caster, target, gameState)`: Applies card effects (damage, block, draw, energy, buffs). **For draw effects on the player, calls `drawCard`.**
-│   │   │   - `applyBuff(target, buffDef, stacks, duration)`: Adds/updates buffs.
-│   │   │   - `runEnemyTurn(gameState)`: Executes enemy turn (plays first card ID from `enemy.deck`).
-│   │   │   - `applyStartOfTurnBuffs(combatant)`: Applies buff effects at turn start.
-│   │   │   - `applyEndOfTurnBuffs(combatant)`: Ticks buff durations, resets block.
-│   │   │   - `startNewFight(gameState)`: Selects next enemy, resets enemy state, **rebuilds player deck by creating new `CardInstance`s from `player.allCards` with new `instanceId`s**, resets player discard/stats/energy, shuffles new deck instances.
-│   │   │   - `generateRewards(gameState)`: Creates reward card options (using `CardDefinition`s).
-│   │   │   - `checkCombatEnd(state)`: Checks HP, updates phase ('gameOver' or 'reward').
-│   │   │   - `initializeNewGameState(playerId)`: Creates initial `GameState`. **Generates a unique `gameId`. Includes `playerId`. Initializes `playerState` by creating `CardInstance`s with unique `instanceId`s for the starting deck. Initializes first enemy. Shuffles initial deck instances. Sets `playerState.nextCard` to `null`.**
-│   │   │   - `drawCard(playerState)`: Moves a `CardInstance` from `deck` to `playerState.nextCard`. Shuffles discard (`CardInstance[]`) into deck if needed, generating momentum.
-│   │   │   - `shuffleDeck(playerState)`: Shuffles discard (`CardInstance[]`) into deck (`CardInstance[]`) (or just deck if discard empty). Uses Fisher-Yates shuffle.
-│   │   └── index.ts # Main server entry point. Initializes Express, WebSocket server. **Constructs the flat `gameConfig` object from constants and data.** Handles WebSocket connections, 'register' message (sends 'init' with state and config). Defines HTTP endpoints (`/api/config`, `/api/validate-action`). `/api/validate-action` calls `gameManager.validateAction`, potentially calls `gameManager.runEnemyTurn`, and broadcasts `state_update`.
+│   │   │   ├── cards.ts # Defines `CardDefinition` interface and exports `cards` object.
+│   │   │   ├── enemies.ts # Defines `EnemyDefinition` interface and exports `enemies` object.
+│   │   │   └── buffs.ts # Defines `BuffDefinition` interface and exports `buffs` object.
+│   │   ├── websocket/
+│   │   │   └── connectionHandler.ts # **Manages WebSocket connections using `wss`, `activeConnections`, and `wsPlayerMap`. Handles `register` messages, sends `init` messages with state and config, and manages connection cleanup.**
+│   │   ├── config.ts # Stores static game configuration constants (e.g., player stats, momentum values, reward counts, animation timings).
+│   │   ├── gameManager.ts # Implements the core game logic (`DefaultGameManager`). Holds `playerStates`. Includes methods for state management, action validation, applying effects, turn logic, combat setup/end, rewards, initialization, drawing/shuffling.
+│   │   ├── types.ts # Contains shared TypeScript types (re-exporting definitions from `data/`), interfaces (`GameState`, `PlayerState`, `CardInstance`, `GameConfig`, etc.).
+│   │   └── index.ts # **Main server entry point. Initializes Express, HTTP server, WebSocket server. Loads game config, instantiates `GameManager`. Wires up API routes (from `api/routes.ts`) and WebSocket handling (from `websocket/connectionHandler.ts`). Starts the server.**
 │   ├── package.json # Server dependencies and scripts.
 │   └── tsconfig.json # Server TypeScript configuration.
 ├── instructions.md # This file - Detailed project overview, file structure, component/module descriptions.
